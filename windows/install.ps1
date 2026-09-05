@@ -20,7 +20,19 @@ if (Test-Path $PROFILE) {
     Copy-Item $PROFILE $BackupProfile -Force
 }
 Copy-Item $ProfileSrc $PROFILE -Force
-Write-Host "  [LINKED] $PROFILE updated." -ForegroundColor Green
+Write-Host "  [LINKED] $PROFILE updated (PowerShell 7)." -ForegroundColor Green
+
+# 1b. Windows PowerShell 5.1 Profile Setup
+$WinPSDir = Join-Path (Split-Path -Parent $ProfileDir) "WindowsPowerShell"
+if (Test-Path $WinPSDir) {
+    $WinPSProfile = Join-Path $WinPSDir "Microsoft.PowerShell_profile.ps1"
+    $WinPSSrc = Join-Path $WindowsDir "WindowsPowerShell_profile.ps1"
+    if (Test-Path $WinPSProfile) {
+        Copy-Item $WinPSProfile "$WinPSProfile.backup.$Timestamp" -Force
+    }
+    Copy-Item $WinPSSrc $WinPSProfile -Force
+    Write-Host "  [LINKED] $WinPSProfile updated (Windows PowerShell 5.1)." -ForegroundColor Green
+}
 
 # 2. Starship Config Setup
 $ConfigDir = Join-Path $HOME ".config"

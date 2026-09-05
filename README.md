@@ -49,6 +49,7 @@ dotfiles/
 │   └── cheatsheet                   # Interactive ANSI terminal reference tool
 └── windows/
     ├── Microsoft.PowerShell_profile.ps1 # Complete PowerShell 7 profile
+    ├── WindowsPowerShell_profile.ps1    # Aligned Windows PowerShell 5.1 profile
     ├── terminal-settings.json       # Windows Terminal settings (Gruvbox Dark)
     ├── install.ps1                  # One-click bootstrap installer for Windows
     └── my-posh-theme.omp.json       # Oh My Posh theme (backup / legacy fallback)
