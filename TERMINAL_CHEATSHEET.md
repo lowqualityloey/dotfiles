@@ -95,6 +95,13 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 
 | Command / Shortcut | What It Does |
 | :--- | :--- |
+| **`z <folder>`** | Smart-jump to frequent folders (via `zoxide`) |
+| **`zi`** | Interactive fuzzy directory selection menu |
+| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Fuzzy-search files with preview (via `PSFzf` + `fzf`) |
+| <kbd>Ctrl</kbd> + <kbd>R</kbd> | Fuzzy-search command history (via `PSFzf` + `fzf`) |
+| <kbd>Ctrl</kbd> + <kbd>Space</kbd> | Accept Predictive IntelliSense suggestion |
+| <kbd>Tab</kbd> | Interactive autocompletion grid (with `posh-git` & `CompletionPredictor`) |
+| **`ls`** / **`dir`** | File listing with Nerd Font icons (via `Terminal-Icons`) |
 | **`gst`**, **`gp`**, **`gl`** | Git status, push, pull |
 | **`gco`**, **`gcb`** | Git checkout, checkout branch |
 | **`lg`** | Launch LazyGit |
@@ -109,18 +116,16 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 | **`sysupdate`** | Upgrade all Windows apps via WinGet and Chocolatey |
 | **`config`** | Edit PowerShell profile in VS Code |
 | **`reload`** | Reload `$PROFILE` without restarting terminal |
-| <kbd>Ctrl</kbd> + <kbd>Space</kbd> / <kbd>Tab</kbd> | Accept Predictive IntelliSense / Open Tab completion menu |
 
 ---
 
 ## 🎨 Theme & Configuration Files
 
-* **Prompt**: Starship with Gruvbox Rainbow (`~/.config/starship.toml`)
-* **Windows Prompt**: Oh My Posh (`~/my-posh-theme.omp.json`)
-* **Terminal Background**: Gruvbox Dark `#282828`
+* **Prompt (WSL2 & Windows)**: Starship with Gruvbox Rainbow (`~/.config/starship.toml`)
+* **Terminal Background**: Gruvbox Dark `#282828` across Windows Terminal, IDE, and WSL
 * **Font**: `JetBrainsMono Nerd Font`
-* **Main Shell Config**: `~/.zshrc`
-* **PowerShell 7 Config**: `C:\Users\jonel\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+* **Main Shell Config (Linux)**: `~/.zshrc`
+* **PowerShell 7 Config (Windows)**: `C:\Users\jonel\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
 * **Tmux Config**: `~/.tmux.conf`
 * **Dotfiles Git Repo**: `~/dotfiles` (Synced to `lowqualityloey/dotfiles`)
 * **Safety Backups**: `~/.zshrc.backup.*` and `~/.config/starship.toml.backup.*`
