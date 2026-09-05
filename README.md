@@ -72,6 +72,18 @@ dotfiles/
 
 ---
 
+## 📋 Prerequisites
+
+Before running the installers:
+* **Font**: Install [JetBrainsMono Nerd Font](https://www.nerdfonts.com/font-downloads) (or any Nerd Font) and configure it as the font in your terminal emulator (e.g., Windows Terminal) so all powerline glyphs and file icons render properly.
+* **Linux / WSL2**: Ensure base tools are available:
+  ```bash
+  sudo apt update && sudo apt install -y zsh git curl
+  ```
+  *(The installer automatically installs Oh My Zsh and clones missing custom plugins for you).*
+
+---
+
 ## 🚀 Quick Start / Installation
 
 ### 1. On Ubuntu 24.04 / WSL2
@@ -90,6 +102,8 @@ git clone https://github.com/lowqualityloey/dotfiles.git "$HOME\dotfiles"
 & "$HOME\dotfiles\windows\install.ps1"
 reload
 ```
+
+> **Note on Windows Terminal**: [`windows/terminal-settings.json`](windows/terminal-settings.json) is provided as a complete reference. If you already have existing profiles, you can copy the `Gruvbox Dark` scheme and `defaults` font block into your own settings without overwriting your custom profile GUIDs.
 
 ---
 
@@ -111,7 +125,8 @@ reload
 | **`grep <pat>`** | WSL2 & Win | Text search (bridges to `Select-String` on Windows) |
 | **`open`** | WSL2 & Win | Open current directory in Windows File Explorer |
 | **`pbcopy`** / **`pbpaste`** | WSL2 & Win | Read/write directly to the Windows system clipboard |
-| **`cdwsl`** | Windows | Jump directly to Ubuntu WSL2 home folder (`\\wsl$\Ubuntu\home\heyloey`) |
+| **`cdwsl`** | Windows | Jump directly to Ubuntu WSL2 home folder (dynamically detected) |
+| **`cddoc`** | Windows | Jump directly to Documents folder (supports OneDrive or local Documents) |
 | **`reload`** | WSL2 & Win | Re-source shell profile without restarting terminal window |
 | **`sysclean`** | Windows | Flush DNS and clean temporary system files |
 | **`sysupdate`** | Windows | Upgrade all Windows apps via WinGet and Chocolatey |

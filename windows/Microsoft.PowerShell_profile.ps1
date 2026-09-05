@@ -70,8 +70,29 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 function ..    { Set-Location .. }
 function ...   { Set-Location ..\.. }
 function ....  { Set-Location ..\..\.. }
-function cdwsl { Set-Location "\\wsl$\Ubuntu\home\heyloey" }
-function cddoc { Set-Location "$HOME\OneDrive\Documents" }
+function cdwsl {
+    if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        $wslHome = (wsl.exe -e sh -c 'echo -n $HOME' 2>$null)
+        if ($wslHome -and (Test-Path "\\wsl$\Ubuntu$wslHome")) {
+            Set-Location "\\wsl$\Ubuntu$wslHome"
+            return
+        }
+    }
+    if (Test-Path "\\wsl$\Ubuntu\home\heyloey") {
+        Set-Location "\\wsl$\Ubuntu\home\heyloey"
+        return
+    }
+    if (Test-Path "\\wsl$") {
+        Set-Location "\\wsl$"
+    }
+}
+function cddoc {
+    if (Test-Path "$HOME\OneDrive\Documents") {
+        Set-Location "$HOME\OneDrive\Documents"
+    } else {
+        Set-Location "$HOME\Documents"
+    }
+}
 
 # Linux bridges
 Set-Alias -Name which   -Value Get-Command -Option AllScope

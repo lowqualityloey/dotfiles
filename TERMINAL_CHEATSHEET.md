@@ -114,8 +114,8 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 | **`gst`**, **`gp`**, **`gl`** | Git status, push, pull |
 | **`gco`**, **`gcb`** | Git checkout, checkout branch |
 | **`lg`** | Launch LazyGit |
-| **`cdwsl`** | Jump straight to your Ubuntu WSL2 home folder (`\\wsl$\Ubuntu\home\heyloey`) |
-| **`cddoc`** | Jump straight to your OneDrive Documents folder |
+| **`cdwsl`** | Jump straight to your Ubuntu WSL2 home folder (dynamically detected) |
+| **`cddoc`** | Jump straight to your Documents folder (supports OneDrive or local Documents) |
 | **`..`**, **`...`**, **`....`** | Quick directory navigation |
 | **`which <cmd>`** | PowerShell alias for `Get-Command` |
 | **`grep <pattern>`** | PowerShell alias for `Select-String` |

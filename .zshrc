@@ -146,11 +146,23 @@ alias pbcopy="clip.exe"
 alias open="explorer.exe ."
 
 # Modern CLI Tool Replacements (eza, bat, lazygit)
-alias ls="eza --icons"
-alias ll="eza -la --icons --git"
-alias tree="eza --tree --icons"
-alias cat="bat --paging=never"
-alias lg="lazygit"
+if command -v eza >/dev/null 2>&1; then
+    alias ls="eza --icons"
+    alias ll="eza -la --icons --git"
+    alias tree="eza --tree --icons"
+fi
+
+if command -v bat >/dev/null 2>&1; then
+    alias cat="bat --paging=never"
+elif command -v batcat >/dev/null 2>&1; then
+    alias cat="batcat --paging=never"
+    alias bat="batcat"
+fi
+
+if command -v lazygit >/dev/null 2>&1; then
+    alias lg="lazygit"
+fi
+
 alias dotfiles="git -C ~/dotfiles"
 alias reload="source ~/.zshrc && echo 'Config reloaded!'"
 
@@ -208,7 +220,9 @@ export FZF_DEFAULT_OPTS="
 export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :300 {} 2>/dev/null || eza --tree --level=2 --color=always {}'"
 
 # Starship Prompt Initialization
-eval "$(starship init zsh)"
+if command -v starship >/dev/null 2>&1; then
+    eval "$(starship init zsh)"
+fi
 
 # Machine-specific / private overrides (gitignored)
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
