@@ -25,6 +25,7 @@ A complete guide to your optimized **Zsh + Oh My Zsh + Starship (Gruvbox Rainbow
 | **`agy-models`** | List available AI models & reasoning tiers | `agy-models` |
 | **`agy-usage`** | Check token limits and model quotas | `agy-usage` |
 | **`cheatsheet`** | Open this reference guide in your terminal | `cheatsheet` |
+| **`dotfiles`** | Manage and sync your dotfiles git repository | `dotfiles status` / `dotfiles push` |
 
 ---
 
