@@ -4,6 +4,7 @@
 ![Shell](https://img.shields.io/badge/Shell-Zsh%20%7C%20PowerShell%207-d79921?color=282828&labelColor=3c3836)
 ![Prompt](https://img.shields.io/badge/Prompt-Starship%20Rainbow-83a598?color=282828&labelColor=3c3836)
 ![OS](https://img.shields.io/badge/OS-Ubuntu%2024.04%20(WSL2)%20%2B%20Windows%2011-b8bb26?color=282828&labelColor=3c3836)
+![License](https://img.shields.io/badge/License-MIT-fabd2f?color=282828&labelColor=3c3836)
 
 A unified, high-performance, cross-platform terminal environment optimized for developer productivity across **Ubuntu 24.04 (WSL2)** and **Windows 11 (PowerShell 7)**.
 
@@ -52,6 +53,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 ```text
 dotfiles/
 ├── .gitignore                       # Safeguard against committing secrets & temp files
+├── LICENSE                          # MIT License
 ├── .zshrc                           # Optimized Zsh configuration (WSL2)
 ├── starship.toml                    # Shared Starship Gruvbox Rainbow configuration
 ├── .tmux.conf                       # Tmux quad-terminal & ergonomics settings
@@ -163,3 +165,9 @@ dotfiles add -A
 dotfiles commit -m "Update aliases"
 dotfiles push
 ```
+
+---
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE). Feel free to use, fork, and adapt these configurations for your own setup.
