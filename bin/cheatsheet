@@ -20,7 +20,7 @@ fi
 
 cat << CHEAT
 
-${BOLD}${YELLOW}🚀 TERMINAL & CLI CHEATSHEET${RESET}  ${GRAY}(run 'cheatsheet --full' for detailed guide)${RESET}
+${BOLD}${YELLOW}🚀 TERMINAL & CLI CHEATSHEET${RESET}  ${GRAY}(run 'cheatsheet --full' for manual)${RESET}
 
 ${AQUA}📁 NAVIGATION & FILES${RESET}
   ${GREEN}ls${RESET}              Colorized file list with Nerd Font icons (eza)
@@ -36,13 +36,17 @@ ${AQUA}🔍 SEARCH & COMPLETION${RESET}
   ${GREEN}Ctrl + Space${RESET}    Accept inline autosuggestion without leaving home row
 
 ${AQUA}🌿 GIT & MULTI-TERMINAL${RESET}
-  ${GREEN}lg${RESET}              Launch Lazygit (full-featured Git terminal UI)
+  ${GREEN}lg${RESET}              Launch Lazygit (full Git terminal UI)
+  ${GREEN}gst / gp / gl${RESET}   Git shortcuts (status, push, pull)
+  ${GREEN}gco / gcb${RESET}       Git checkout / branch switch
   ${GREEN}grid${RESET}            Open / re-attach 2×2 quad-terminal layout in 1 window
-  ${GREEN}dotfiles${RESET}        Manage dotfiles repo (e.g. dotfiles status / push)
+  ${GREEN}Ctrl+b, z${RESET}       Zoom / unzoom current tmux pane to full screen
+  ${GREEN}dotfiles${RESET}        Manage dotfiles repo (dotfiles status / push)
 
 ${AQUA}🪟 WSL2 & PRODUCTIVITY${RESET}
   ${GREEN}pbcopy${RESET}          Copy output directly to Windows clipboard (cat file | pbcopy)
   ${GREEN}open${RESET}            Open current directory in Windows File Explorer
+  ${GREEN}reload${RESET}          Reload shell configuration (source ~/.zshrc)
   ${GREEN}Esc Esc${RESET}         Double-tap Escape to prepend sudo to current command
   ${GREEN} <command>${RESET}      Leading space omits command from history (for API keys)
   ${GREEN}extract <file>${RESET}  Universal archive unpacker (.zip, .tar.gz, .7z)

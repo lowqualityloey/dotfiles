@@ -152,6 +152,7 @@ alias tree="eza --tree --icons"
 alias cat="bat --paging=never"
 alias lg="lazygit"
 alias dotfiles="git -C ~/dotfiles"
+alias reload="source ~/.zshrc && echo 'Config reloaded!'"
 
 # Quad-Terminal 2x2 Grid via tmux
 grid() {

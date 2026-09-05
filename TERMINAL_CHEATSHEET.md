@@ -2,30 +2,46 @@
 
 A complete guide to your optimized **Zsh + Oh My Zsh + Starship (Gruvbox Rainbow)** setup on Ubuntu (WSL2).
 
+**Dotfiles Repository**: [github.com/lowqualityloey/dotfiles](https://github.com/lowqualityloey/dotfiles) *(Private)*
+
 ---
 
-## ⚡ Quick Cheatsheet
+## ⚡ Quick Reference Card
 
-| Command / Shortcut | What It Does | Example |
-| :--- | :--- | :--- |
-| **`ls`** | Colorized file list with icons (via `eza`) | `ls` |
-| **`ll`** | Detailed list + file permissions + Git status | `ll` |
-| **`tree`** | Visual directory tree with icons | `tree` or `tree -L 2` |
-| **`cat <file>`** | View file with syntax highlighting & line numbers (via `bat`) | `cat package.json` |
-| **`z <folder>`** | Smart jump to any frecent directory (via `zoxide`) | `z shelf` |
-| **`zi`** | Interactive fuzzy directory selector | `zi` |
-| **`lg`** | Launch full Git Terminal UI (via `lazygit`) | `lg` |
-| **`grid`** | Open / re-attach a 2×2 quad-terminal layout in 1 window | `grid` |
-| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Fuzzy-find file with **live syntax preview window** | Press inside any folder |
-| <kbd>Ctrl</kbd> + <kbd>R</kbd> | Fuzzy-search command history | Press and start typing |
-| <kbd>Ctrl</kbd> + <kbd>Space</kbd> | Accept inline auto-suggestion without leaving home row | Type partial command, hit shortcut |
-| <kbd>Esc</kbd> <kbd>Esc</kbd> | Automatically prepend `sudo` to current/previous command | Double-tap Escape |
-| **`pbcopy`** | Copy text/command output directly to Windows clipboard | `cat id_rsa.pub \| pbcopy` |
-| **`open`** | Open current directory in Windows File Explorer | `open` |
-| **`agy-models`** | List available AI models & reasoning tiers | `agy-models` |
-| **`agy-usage`** | Check token limits and model quotas | `agy-usage` |
-| **`cheatsheet`** | Open this reference guide in your terminal | `cheatsheet` |
-| **`dotfiles`** | Manage and sync your dotfiles git repository | `dotfiles status` / `dotfiles push` |
+### 📁 Navigation & Files
+* **`ls`** — Colorized file list with Nerd Font icons (`eza --icons`)
+* **`ll`** — Detailed list with permissions, file sizes & Git status (`eza -la --icons --git`)
+* **`tree`** — Visual directory hierarchy tree with icons (`eza --tree --icons`)
+* **`cat <file>`** — Syntax-highlighted viewer with line numbers (`bat --paging=never`)
+* **`z <folder>`** — Smart jump to frequent folder by keyword (e.g. `z shelf`, `z dash`)
+* **`zi`** — Interactive fuzzy directory selector menu
+
+### 🔍 Search & Completion
+* <kbd>Ctrl</kbd> + <kbd>T</kbd> — Fuzzy file search with **live syntax preview pane** (powered by `fd` + `bat`)
+* <kbd>Ctrl</kbd> + <kbd>R</kbd> — Fuzzy command history search with Gruvbox syntax styling
+* <kbd>Ctrl</kbd> + <kbd>Space</kbd> — Accept inline auto-suggestion without leaving home row
+
+### 🌿 Git & Multi-Terminal
+* **`lg`** — Launch Lazygit (full-featured terminal UI for staging, committing, pushing)
+* **`gst`** — Git status shortcut (via OMZ Git plugin)
+* **`gp`** / **`gl`** — Git push / Git pull
+* **`gco <branch>`** — Git checkout branch
+* **`gcb <branch>`** — Git checkout new branch (`git checkout -b`)
+* **`grid`** — Open / re-attach a 2×2 quad-terminal layout in 1 window
+* <kbd>Ctrl</kbd> + <kbd>b</kbd>, <kbd>z</kbd> — Zoom / unzoom current tmux pane to full screen
+* **`dotfiles`** — Manage your dotfiles git repository (`dotfiles status` / `dotfiles push`)
+
+### 🪟 WSL2 & Productivity
+* **`pbcopy`** — Copy text/command output directly to Windows clipboard (`cat id_rsa.pub | pbcopy`)
+* **`open`** — Open current directory in Windows File Explorer (`open`)
+* **`reload`** — Reload shell configuration instantly (`source ~/.zshrc`)
+* <kbd>Esc</kbd> <kbd>Esc</kbd> — Automatically prepend `sudo` to current/previous command
+* **Leading Space** (` `) — Any command starting with a space is excluded from history
+* **`extract <file>`** — Universal archive unpacker (`.zip`, `.tar.gz`, `.tar.xz`, `.7z`)
+
+### 🤖 Antigravity AI
+* **`agy-models`** — List available AI models and reasoning tiers
+* **`agy-usage`** — Check token limits, model quotas & reset countdowns
 
 ---
 
@@ -42,9 +58,9 @@ Instead of typing long paths like `cd ~/personal/shelf/frontend`:
 
 ---
 
-### 2. `fzf` (Fuzzy Finder with Live Preview)
+### 2. `fzf` + `fd` (Fuzzy Finder with Live Preview)
 * **File Search with Preview (<kbd>Ctrl</kbd> + <kbd>T</kbd>)**:
-  * Press <kbd>Ctrl</kbd> + <kbd>T</kbd> to search files.
+  * Automatically respects `.gitignore` (skips `node_modules` and `.git`).
   * As you navigate up/down with arrow keys, a right-hand pane shows the file contents with syntax highlighting (`bat`) or directory contents (`eza`).
   * Hit <kbd>Enter</kbd> to paste the selected path into your terminal.
 * **History Search (<kbd>Ctrl</kbd> + <kbd>R</kbd>)**:
@@ -56,7 +72,7 @@ Instead of typing long paths like `cd ~/personal/shelf/frontend`:
 A terminal UI that turns complex Git commands into simple keystrokes:
 * Type **`lg`** inside any repository.
 * **Key Controls**:
-  * <kbd>Space</kbd>: Stage / unstage file or hunk.
+  * <kbd>Space</kbd>: Stage / unstage file or individual code hunk.
   * <kbd>c</kbd>: Commit staged changes (opens prompt for message).
   * <kbd>P</kbd>: Push to remote.
   * <kbd>p</kbd>: Pull from remote.
@@ -65,15 +81,17 @@ A terminal UI that turns complex Git commands into simple keystrokes:
 
 ---
 
-### 4. `grid` (Quad 2×2 Multi-Terminal)
+### 4. `grid` & `tmux` (Quad 2×2 Multi-Terminal)
 Launches 4 independent terminals tiled in a 2×2 grid inside your single window:
 * Type **`grid`** to open or re-attach.
+* **Key Controls**:
+  * **Zoom Active Pane**: Press <kbd>Ctrl</kbd> + <kbd>b</kbd>, then <kbd>z</kbd> to toggle full-screen for that pane.
+  * **Detach & Keep Running**: Press <kbd>Ctrl</kbd> + <kbd>b</kbd>, then <kbd>d</kbd>. (Run `grid` later to resume).
+  * **Close a Pane**: Type `exit`.
 * **Mouse Controls**:
   * Click any pane to focus.
-  * Drag the divider borders to resize panes.
+  * Drag the divider borders to resize panes freely.
   * Scroll inside any pane with the mouse wheel.
-* **Detach & Keep Running**: Press <kbd>Ctrl</kbd> + <kbd>b</kbd>, then <kbd>d</kbd>. (Run `grid` later to resume).
-* **Close a Pane**: Type `exit`.
 
 ---
 
@@ -86,7 +104,7 @@ Launches 4 independent terminals tiled in a 2×2 grid inside your single window:
 
 ---
 
-### 6. Archive Extraction (`extract`)
+### 6. Universal Archive Extraction (`extract`)
 Never memorize `tar -xzvf` or `unzip` flags again. Just type:
 ```zsh
 extract archive.tar.gz
@@ -109,8 +127,8 @@ extract compressed.7z
 
 | File | Purpose |
 | :--- | :--- |
-| **`~/.zshrc`** | Main shell configuration (plugins, aliases, paths) |
-| **`~/.config/starship.toml`** | Starship prompt layout & colors |
-| **`~/.tmux.conf`** | Tmux settings (mouse support, splits, 256 colors) |
-| **`~/.local/bin/`** | User-installed CLI binaries (`fzf`, `zoxide`, `bat`, `eza`, `fd`, `lazygit`, `starship`) |
-| **`~/.zshrc.backup.*`** | Timestamped safety backups of original `.zshrc` |
+| **`~/.zshrc`** | Main shell configuration (symlinked to `~/dotfiles/.zshrc`) |
+| **`~/.config/starship.toml`** | Starship prompt layout & colors (symlinked to `~/dotfiles/starship.toml`) |
+| **`~/.tmux.conf`** | Tmux settings (symlinked to `~/dotfiles/.tmux.conf`) |
+| **`~/.local/bin/`** | User-installed CLI binaries (`fzf`, `zoxide`, `bat`, `eza`, `fd`, `lazygit`, `starship`, `cheatsheet`) |
+| **`~/dotfiles/`** | Git repository tracked at [github.com/lowqualityloey/dotfiles](https://github.com/lowqualityloey/dotfiles) |
