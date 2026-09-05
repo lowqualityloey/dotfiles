@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+# ANSI Color Codes (Gruvbox Dark Palette)
+YELLOW=$'\033[1;33m'
+AQUA=$'\033[1;36m'
+GREEN=$'\033[1;32m'
+GRAY=$'\033[0;90m'
+WHITE=$'\033[0;37m'
+BOLD=$'\033[1m'
+RESET=$'\033[0m'
+
+if [[ "$1" == "--full" || "$1" == "-f" ]]; then
+    if command -v bat >/dev/null 2>&1; then
+        bat --paging=always ~/TERMINAL_CHEATSHEET.md
+    else
+        less ~/TERMINAL_CHEATSHEET.md
+    fi
+    exit 0
+fi
+
+cat << CHEAT
+
+${BOLD}${YELLOW}🚀 TERMINAL & CLI CHEATSHEET${RESET}  ${GRAY}(run 'cheatsheet --full' for detailed guide)${RESET}
+
+${AQUA}📁 NAVIGATION & FILES${RESET}
+  ${GREEN}ls${RESET}              Colorized file list with Nerd Font icons (eza)
+  ${GREEN}ll${RESET}              Detailed list with permissions & Git status
+  ${GREEN}tree${RESET}            Directory hierarchy tree with icons
+  ${GREEN}cat <file>${RESET}      Syntax-highlighted file viewer (bat)
+  ${GREEN}z <folder>${RESET}      Jump to frequent folder (e.g. z shelf, z personal)
+  ${GREEN}zi${RESET}              Interactive fuzzy directory search menu
+
+${AQUA}🔍 SEARCH & COMPLETION${RESET}
+  ${GREEN}Ctrl + T${RESET}        Fuzzy file search with live syntax preview
+  ${GREEN}Ctrl + R${RESET}        Fuzzy command history search
+  ${GREEN}Ctrl + Space${RESET}    Accept inline autosuggestion without leaving home row
+
+${AQUA}🌿 GIT & MULTI-TERMINAL${RESET}
+  ${GREEN}lg${RESET}              Launch Lazygit (full-featured Git terminal UI)
+  ${GREEN}grid${RESET}            Open / re-attach 2×2 quad-terminal layout in 1 window
+  ${GREEN}dotfiles${RESET}        Manage dotfiles repo (e.g. dotfiles status / push)
+
+${AQUA}🪟 WSL2 & PRODUCTIVITY${RESET}
+  ${GREEN}pbcopy${RESET}          Copy output directly to Windows clipboard (cat file | pbcopy)
+  ${GREEN}open${RESET}            Open current directory in Windows File Explorer
+  ${GREEN}Esc Esc${RESET}         Double-tap Escape to prepend sudo to current command
+  ${GREEN} <command>${RESET}      Leading space omits command from history (for API keys)
+  ${GREEN}extract <file>${RESET}  Universal archive unpacker (.zip, .tar.gz, .7z)
+
+${AQUA}🤖 ANTIGRAVITY AI${RESET}
+  ${GREEN}agy-models${RESET}      List available AI models & reasoning tiers
+  ${GREEN}agy-usage${RESET}       Check token limits, quotas & reset countdowns
+
+CHEAT

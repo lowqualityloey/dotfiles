@@ -151,7 +151,6 @@ alias ll="eza -la --icons --git"
 alias tree="eza --tree --icons"
 alias cat="bat --paging=never"
 alias lg="lazygit"
-alias cheatsheet="bat ~/TERMINAL_CHEATSHEET.md"
 alias dotfiles="git -C ~/dotfiles"
 
 # Quad-Terminal 2x2 Grid via tmux
