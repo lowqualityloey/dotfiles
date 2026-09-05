@@ -20,15 +20,18 @@ if ($Host.Name -eq 'ConsoleHost') {
 }
 
 # ==============================================================================
-# 3. Prompt Initialization (Oh My Posh - Clean & Fast)
+# 3. Prompt Initialization (Starship - Gruvbox Rainbow)
 # ==============================================================================
-if (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    $ThemePath = "$HOME\my-posh-theme.omp.json"
-    if (Test-Path $ThemePath) {
-        oh-my-posh init pwsh --config $ThemePath | Invoke-Expression
-    } else {
-        oh-my-posh init pwsh | Invoke-Expression
+if (-not (Get-Command starship -ErrorAction SilentlyContinue)) {
+    if (Test-Path 'C:\Program Files\starship\bin') {
+        $env:PATH = "C:\Program Files\starship\bin;$env:PATH"
     }
+}
+
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (&starship init powershell)
+} elseif (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
+    oh-my-posh init pwsh --config "$HOME\my-posh-theme.omp.json" | Invoke-Expression
 }
 
 # File & Folder Icons in dir/ls (if module is installed)
