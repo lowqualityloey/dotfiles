@@ -10,11 +10,13 @@ $OutputEncoding           = [System.Text.Encoding]::UTF8
 # ==============================================================================
 if ($Host.Name -eq 'ConsoleHost') {
     Import-Module PSReadLine -ErrorAction SilentlyContinue
-    Set-PSReadLineOption -PredictionSource History
-    Set-PSReadLineOption -PredictionViewStyle InlineView
-    Set-PSReadLineOption -Colors @{ InlinePrediction = '#928374' } # Gruvbox muted gray
-    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
-    Set-PSReadLineKeyHandler -Chord 'Ctrl+Space' -Function Complete
+    try {
+        Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
+        Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
+        Set-PSReadLineOption -Colors @{ InlinePrediction = '#928374' } -ErrorAction SilentlyContinue # Gruvbox muted gray
+    } catch { }
+    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete -ErrorAction SilentlyContinue
+    Set-PSReadLineKeyHandler -Chord 'Ctrl+Spacebar' -Function AcceptSuggestion -ErrorAction SilentlyContinue
 }
 
 # ==============================================================================
