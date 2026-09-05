@@ -125,3 +125,11 @@ function Update-AllPackages {
     }
 }
 Set-Alias -Name sysupdate -Value Update-AllPackages
+
+# ==============================================================================
+# 9. Local Machine Overrides & Private Secrets (Gitignored)
+# ==============================================================================
+$LocalProfile = Join-Path $HOME ".profile.local.ps1"
+if (Test-Path $LocalProfile) {
+    . $LocalProfile
+}

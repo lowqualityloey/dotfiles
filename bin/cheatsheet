@@ -39,7 +39,7 @@ ${AQUA}🌿 GIT & MULTI-TERMINAL${RESET}
   ${GREEN}lg${RESET}              Launch Lazygit (full Git terminal UI)
   ${GREEN}gst / gp / gl${RESET}   Git shortcuts (status, push, pull)
   ${GREEN}gco / gcb${RESET}       Git checkout / branch switch
-  ${GREEN}grid${RESET}            Open / re-attach 2×2 quad-terminal layout in 1 window
+  ${GREEN}grid / grid -r${RESET}  Open / reset 2×2 quad-terminal layout in 1 window
   ${GREEN}Ctrl+b, z${RESET}       Zoom / unzoom current tmux pane to full screen
   ${GREEN}dotfiles${RESET}        Manage dotfiles repo (dotfiles status / push)
 

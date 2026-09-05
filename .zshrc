@@ -132,11 +132,11 @@ nvm() {
     nvm "$@"
 }
 
-export PATH="$PATH:/home/heyloey/.spicetify"
+export PATH="$PATH:$HOME/.spicetify"
 
 
 # Added by Antigravity CLI installer
-export PATH="/home/heyloey/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 alias agy-ide='antigravity-ide'
 alias agy-models='agy models'
 alias agy-usage="agy -i '/usage'"
@@ -156,8 +156,24 @@ alias reload="source ~/.zshrc && echo 'Config reloaded!'"
 
 # Quad-Terminal 2x2 Grid via tmux
 grid() {
+    # If already inside tmux, switch to quad instead of failing to nest
+    if [ -n "$TMUX" ]; then
+        if tmux has-session -t quad 2>/dev/null; then
+            tmux switch-client -t quad
+        else
+            echo "Inside tmux: detach or exit first to create a new grid."
+        fi
+        return 0
+    fi
+
+    # Quick reset option: `grid reset` or `grid -r`
+    if [ "$1" = "reset" ] || [ "$1" = "-r" ]; then
+        tmux kill-session -t quad 2>/dev/null && echo "Session 'quad' reset."
+    fi
+
     if tmux has-session -t quad 2>/dev/null; then
-        tmux attach-session -t quad
+        # -d detaches stale/minimized clients so the window resizes to full terminal
+        tmux attach-session -d -t quad
     else
         tmux new-session -d -s quad
         tmux split-window -h -t quad
@@ -166,7 +182,7 @@ grid() {
         tmux split-window -v -t quad
         tmux select-layout -t quad tiled
         tmux select-pane -t quad -t 1
-        tmux attach-session -t quad
+        tmux attach-session -d -t quad
     fi
 }
 
@@ -194,7 +210,8 @@ export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-ran
 # Starship Prompt Initialization
 eval "$(starship init zsh)"
 
-
+# Machine-specific / private overrides (gitignored)
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh"

@@ -64,14 +64,23 @@ A full Git management interface inside your terminal:
 ### 4. `grid` (Quad 2×2 Multi-Terminal)
 Splits your single terminal window into a 2×2 grid:
 * Type **`grid`** to create or resume the session.
+* Type **`grid reset`** (or `grid -r`) to cleanly restart the session if panes get out of sync or minimized.
 * **Mouse Controls**: Click any pane to type; drag border dividers to resize; scroll with mouse wheel.
 * **Detach**: Press <kbd>Ctrl</kbd> + <kbd>b</kbd>, then <kbd>d</kbd> (keeps tasks running; type `grid` to re-enter).
 * **Close Pane**: Type `exit`.
 
 ---
 
-### 5. Secret History Protection
-* Any command beginning with a **space** is excluded from history:
+### 5. Managing Secrets & Private Overrides
+* **Local Machine Config (`~/.zshrc.local` / `$HOME\.profile.local.ps1`)**:
+  Store secret API tokens, private SSH configs, or company aliases in local files. These are automatically loaded by your shell and ignored by Git so they are never pushed:
+  ```zsh
+  # In ~/.zshrc.local (WSL2 / Linux):
+  export OPENAI_API_KEY="sk-..."
+  export GITHUB_TOKEN="ghp_..."
+  ```
+* **Secret History Protection**:
+  Any command beginning with a **space** is excluded from shell history:
   ```zsh
    export API_KEY="sk-..."    # Note leading space: never saved to ~/.zsh_history!
   ```
@@ -125,7 +134,8 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 * **Terminal Background**: Gruvbox Dark `#282828` across Windows Terminal, IDE, and WSL
 * **Font**: `JetBrainsMono Nerd Font`
 * **Main Shell Config (Linux)**: `~/.zshrc`
-* **PowerShell 7 Config (Windows)**: `C:\Users\jonel\OneDrive\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`
+* **PowerShell 7 Config (Windows)**: `$PROFILE` (e.g. `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`)
+* **Local Machine Overrides**: `~/.zshrc.local` (Linux) and `$HOME\.profile.local.ps1` (Windows)
 * **Tmux Config**: `~/.tmux.conf`
 * **Dotfiles Git Repo**: `~/dotfiles` (Synced to `lowqualityloey/dotfiles`)
 * **Safety Backups**: `~/.zshrc.backup.*` and `~/.config/starship.toml.backup.*`

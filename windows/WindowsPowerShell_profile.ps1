@@ -66,3 +66,9 @@ function Edit-Profile {
     if (Get-Command code -ErrorAction SilentlyContinue) { code $PROFILE } else { notepad $PROFILE }
 }
 Set-Alias -Name config -Value Edit-Profile
+
+# 8. Local Machine Overrides & Private Secrets (Gitignored)
+$LocalProfile = Join-Path $HOME ".profile.local.ps1"
+if (Test-Path $LocalProfile) {
+    . $LocalProfile
+}

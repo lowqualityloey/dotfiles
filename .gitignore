@@ -1,0 +1,34 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Backups & Temporary files
+*.bak
+*.backup
+*.backup.*
+*.tmp
+
+# Private / Local overrides (Never commit secrets to dotfiles)
+*.local
+*.local.*
+.zshrc.local
+.profile.local.ps1
+.env
+.env.*
+*.secret
+*.key
+*.pem
+*.token
+
+# Shell history & session states
+.zsh_history
+.bash_history
+.lesshst

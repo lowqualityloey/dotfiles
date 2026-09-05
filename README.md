@@ -18,8 +18,8 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 * **⚡ Blazing Fast Linux Shell (WSL2 Zsh)**:
   * Startup time slashed from **2.68s to ~0.59s (>4.5× speedup)**.
   * Lazy-loaded NVM and skipped redundant compaudit security checks.
-  * 2×2 quad-terminal layout command (`grid`) with mouse resize and scroll wheel support.
-  * Built-in security guardrails: `HIST_IGNORE_SPACE` prevents commands with a leading space from saving to history.
+  * 2×2 quad-terminal layout command (`grid`, `grid reset`) with mouse resize and scroll wheel support.
+  * Built-in security guardrails: `HIST_IGNORE_SPACE` prevents commands with a leading space from saving to history, plus automatic sourcing of gitignored `~/.zshrc.local` for machine-specific secrets.
 * **🪟 Modern Windows Shell (PowerShell 7)**:
   * **UTF-8 console encoding** enforced to eliminate broken emojis, Git logs, and symbols.
   * **PSReadLine Predictive IntelliSense** with Gruvbox muted gray (`#928374`) inline autocompletion (<kbd>Ctrl</kbd> + <kbd>Spacebar</kbd>).
@@ -27,6 +27,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * **`Terminal-Icons`** for rich file & directory glyphs in `ls` and `dir`.
   * **Deep Git Tab Completion** via `posh-git`.
   * **Linux/Zsh Parity Bridges**: `which`, `grep`, `touch`, `open`, `pbcopy`/`pbpaste`, `cdwsl`, and git aliases (`gst`, `gp`, `gl`, `gco`, `gcb`, `lg`).
+  * **Private Overrides**: Automatically loads gitignored `$HOME/.profile.local.ps1` if present.
 * **🔍 Modern Rust CLI Suite**:
   * `fzf` & `fd`: Fuzzy file finding (<kbd>Ctrl</kbd> + <kbd>T</kbd>) and history search (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
   * `zoxide`: Smart directory jumping (`z <folder>`, `zi`).
@@ -40,6 +41,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 
 ```text
 dotfiles/
+├── .gitignore                       # Safeguard against committing secrets & temp files
 ├── .zshrc                           # Optimized Zsh configuration (WSL2)
 ├── starship.toml                    # Shared Starship Gruvbox Rainbow configuration
 ├── .tmux.conf                       # Tmux quad-terminal & ergonomics settings
@@ -83,7 +85,7 @@ reload
 | Command / Key | Scope | What It Does |
 | :--- | :--- | :--- |
 | **`cheatsheet`** | WSL2 | Displays clean interactive CLI quick-reference card (`cheatsheet --full` for manual) |
-| **`grid`** | WSL2 | Launches or resumes a 2×2 quad-terminal layout in 1 window |
+| **`grid`** / **`grid reset`** | WSL2 | Launches, resumes, or resets a 2×2 quad-terminal layout in 1 window |
 | **`z <folder>`** | WSL2 & Win | Smart-jump to frequent folders (`z shelf`, `z doc`) |
 | **`zi`** | WSL2 & Win | Interactive fuzzy directory selection menu |
 | <kbd>Ctrl</kbd> + <kbd>T</kbd> | WSL2 & Win | Fuzzy-search files in current folder with live syntax preview |
@@ -102,6 +104,24 @@ reload
 | **`sysupdate`** | Windows | Upgrade all Windows apps via WinGet and Chocolatey |
 
 *(See [TERMINAL_CHEATSHEET.md](TERMINAL_CHEATSHEET.md) for full documentation).*
+
+---
+
+## 🔒 Private Overrides & Secrets
+
+To keep work credentials, private API keys, and machine-specific configurations safe from your public Git repository:
+
+* **Linux / WSL2 (`~/.zshrc.local`)**:
+  Create `~/.zshrc.local` for sensitive tokens or company aliases. It is automatically sourced by `.zshrc` and ignored by Git:
+  ```zsh
+  export GITHUB_TOKEN="ghp_..."
+  export OPENAI_API_KEY="sk-..."
+  ```
+* **Windows (`~/.profile.local.ps1`)**:
+  Create `$HOME\.profile.local.ps1` for Windows-specific private environment variables or secrets:
+  ```powershell
+  $env:ANTHROPIC_API_KEY = "sk-ant-..."
+  ```
 
 ---
 
