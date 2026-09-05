@@ -1,6 +1,6 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
-scan_timeout = 120
+scan_timeout = 250
 command_timeout = 500
 
 format = """

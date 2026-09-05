@@ -37,6 +37,7 @@ if ($Host.Name -eq 'ConsoleHost') {
 # ==============================================================================
 # 4. Prompt Initialization (Starship - Gruvbox Rainbow)
 # ==============================================================================
+$env:STARSHIP_LOG = 'error'
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
 } elseif (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
