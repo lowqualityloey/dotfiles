@@ -6,12 +6,27 @@
 $OutputEncoding           = [System.Text.Encoding]::UTF8
 
 # ==============================================================================
-# 2. PSReadLine & Predictive IntelliSense (Fast Autocompletion)
+# 2. Environment PATH Resolution (WinGet & CLI Tools)
+# ==============================================================================
+$ExtraPaths = @(
+    'C:\Program Files\starship\bin',
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\ajeetdsouza.zoxide_Microsoft.Winget.Source_8wekyb3d8bbwe",
+    "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\junegunn.fzf_Microsoft.Winget.Source_8wekyb3d8bbwe"
+)
+foreach ($p in $ExtraPaths) {
+    if ((Test-Path $p) -and ($env:PATH -notlike "*$p*")) {
+        $env:PATH = "$p;$env:PATH"
+    }
+}
+
+# ==============================================================================
+# 3. PSReadLine & Predictive IntelliSense (Fast Autocompletion)
 # ==============================================================================
 if ($Host.Name -eq 'ConsoleHost') {
     Import-Module PSReadLine -ErrorAction SilentlyContinue
+    Import-Module CompletionPredictor -ErrorAction SilentlyContinue
     try {
-        Set-PSReadLineOption -PredictionSource History -ErrorAction SilentlyContinue
+        Set-PSReadLineOption -PredictionSource HistoryAndPlugin -ErrorAction SilentlyContinue
         Set-PSReadLineOption -PredictionViewStyle InlineView -ErrorAction SilentlyContinue
         Set-PSReadLineOption -Colors @{ InlinePrediction = '#928374' } -ErrorAction SilentlyContinue # Gruvbox muted gray
     } catch { }
@@ -20,25 +35,36 @@ if ($Host.Name -eq 'ConsoleHost') {
 }
 
 # ==============================================================================
-# 3. Prompt Initialization (Starship - Gruvbox Rainbow)
+# 4. Prompt Initialization (Starship - Gruvbox Rainbow)
 # ==============================================================================
-if (-not (Get-Command starship -ErrorAction SilentlyContinue)) {
-    if (Test-Path 'C:\Program Files\starship\bin') {
-        $env:PATH = "C:\Program Files\starship\bin;$env:PATH"
-    }
-}
-
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
 } elseif (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
     oh-my-posh init pwsh --config "$HOME\my-posh-theme.omp.json" | Invoke-Expression
 }
 
-# File & Folder Icons in dir/ls (if module is installed)
+# ==============================================================================
+# 5. Developer Modules (Terminal-Icons, posh-git, zoxide, PSFzf)
+# ==============================================================================
+# File & Folder Icons in dir/ls
 Import-Module -Name Terminal-Icons -ErrorAction SilentlyContinue
 
+# Git tab-completion for branches, remotes & stashes
+Import-Module -Name posh-git -ErrorAction SilentlyContinue
+
+# Smart directory jumper (z / zi)
+if (Get-Command zoxide -ErrorAction SilentlyContinue) {
+    zoxide init powershell | Out-String | Invoke-Expression
+}
+
+# Fuzzy finder (Ctrl+T for files, Ctrl+R for history)
+if (Get-Command fzf -ErrorAction SilentlyContinue) {
+    Import-Module -Name PSFzf -ErrorAction SilentlyContinue
+    Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r' -PSReadlineChordProvider 'Ctrl+t'
+}
+
 # ==============================================================================
-# 4. Navigation & Directory Bridges
+# 6. Navigation & Directory Bridges
 # ==============================================================================
 function ..    { Set-Location .. }
 function ...   { Set-Location ..\.. }
@@ -55,7 +81,7 @@ function touch($path) { New-Item -ItemType File -Path $path -Force }
 function open($path = ".") { explorer.exe $path }
 
 # ==============================================================================
-# 5. Git Shortcuts (Parity with Oh My Zsh)
+# 7. Git Shortcuts (Parity with Oh My Zsh)
 # ==============================================================================
 function gst { git status $args }
 function gp  { git push $args }
@@ -65,7 +91,7 @@ function gcb { git checkout -b $args }
 function lg  { lazygit $args }
 
 # ==============================================================================
-# 6. Profile & Maintenance Helpers
+# 8. Profile & Maintenance Helpers
 # ==============================================================================
 function Edit-Profile {
     if (Get-Command code -ErrorAction SilentlyContinue) { code $PROFILE } else { notepad $PROFILE }
