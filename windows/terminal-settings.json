@@ -45,7 +45,7 @@
                 "name": "Command Prompt"
             },
             {
-                "colorScheme": "Vintage",
+                "colorScheme": "Gruvbox Dark",
                 "font": {
                     "face": "JetBrainsMono Nerd Font"
                 },
