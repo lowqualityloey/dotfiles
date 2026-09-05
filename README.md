@@ -9,6 +9,16 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 
 ---
 
+## 📸 Preview
+
+### 🐧 Ubuntu 24.04 (WSL2) — Zsh + Starship Gruvbox Rainbow
+![Ubuntu WSL2 Terminal Demo](assets/ubuntu-wsl2-demo.png)
+
+### 🪟 Windows 11 — PowerShell 7 + Starship Gruvbox Rainbow
+![Windows PowerShell 7 Demo](assets/powershell-demo.png)
+
+---
+
 ## ✨ Features at a Glance
 
 * **🎨 Unified Visual Design**:
@@ -47,6 +57,9 @@ dotfiles/
 ├── .tmux.conf                       # Tmux quad-terminal & ergonomics settings
 ├── install.sh                       # One-click bootstrap installer for Linux / WSL2
 ├── TERMINAL_CHEATSHEET.md           # Full CLI and shortcut cheatsheet
+├── assets/                          # Demo screenshots and visual assets
+│   ├── ubuntu-wsl2-demo.png
+│   └── powershell-demo.png
 ├── bin/
 │   └── cheatsheet                   # Interactive ANSI terminal reference tool
 └── windows/
