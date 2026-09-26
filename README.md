@@ -27,7 +27,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * **Typography**: `JetBrainsMono Nerd Font` with full symbol support.
   * **Shared Prompt**: **Starship** with the Gruvbox Rainbow preset and a compact 12-hour AM/PM clock (`5:35pm`) across both Linux and Windows.
 * **⚡ Blazing Fast Linux Shell (WSL2 Zsh)**:
-  * Startup time slashed from **2.68s to ~0.59s (>4.5× speedup)**.
+  * Startup time cut from **2.68s to ~0.7s (~3.8x faster)**, measured with `zsh -i -c exit`.
   * Lazy-loaded NVM and skipped redundant compaudit security checks.
   * 2×2 quad-terminal layout command (`grid`, `grid reset`) with mouse resize and scroll wheel support.
   * Built-in security guardrails: `HIST_IGNORE_SPACE` prevents commands with a leading space from saving to history, plus automatic sourcing of gitignored `~/.zshrc.local` for machine-specific secrets.
@@ -38,6 +38,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * **`Terminal-Icons`** for rich file & directory glyphs in `ls` and `dir`.
   * **Deep Git Tab Completion** via `posh-git`.
   * **Linux/Zsh Parity Bridges**: `which`, `grep`, `touch`, `open`, `pbcopy`/`pbpaste`, `cdwsl`, and git aliases (`gst`, `gp`, `gl`, `gco`, `gcb`, `lg`).
+  * **Kiro & Chocolatey Integration**: Sources the Kiro shell integration when `$env:TERM_PROGRAM` is `kiro`, and loads `chocolateyProfile.psm1` when present.
   * **Private Overrides**: Automatically loads gitignored `$HOME/.profile.local.ps1` if present.
 * **🔍 Modern Rust CLI Suite**:
   * `fzf` & `fd`: Fuzzy file finding (<kbd>Ctrl</kbd> + <kbd>T</kbd>) and history search (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
@@ -45,6 +46,9 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `eza`: Colorized directory listings with Git status and file icons (`ls`, `ll`, `tree`).
   * `bat`: Syntax-highlighted text and code viewer (`cat`).
   * `lazygit`: Full-screen Git terminal UI (`lg`).
+* **🔁 Portable by Design**:
+  * No hardcoded usernames, WSL distro names, or absolute home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime.
+  * Optional tools that may be absent (`brew`, `atuin`, GitButler, `oh-my-posh`) are skipped cleanly instead of erroring on a fresh machine.
 
 ---
 
@@ -69,7 +73,7 @@ dotfiles/
     ├── WindowsPowerShell_profile.ps1    # Aligned Windows PowerShell 5.1 profile
     ├── terminal-settings.json       # Windows Terminal settings (Gruvbox Dark)
     ├── install.ps1                  # One-click bootstrap installer for Windows
-    └── my-posh-theme.omp.json       # Oh My Posh theme (backup / legacy fallback)
+    └── my-posh-theme.omp.json       # Oh My Posh theme (fallback when Starship is absent)
 ```
 
 ---
@@ -105,7 +109,7 @@ git clone https://github.com/lowqualityloey/dotfiles.git "$HOME\dotfiles"
 reload
 ```
 
-> **Note on Windows Terminal**: [`windows/terminal-settings.json`](windows/terminal-settings.json) is provided as a complete reference. If you already have existing profiles, you can copy the `Gruvbox Dark` scheme and `defaults` font block into your own settings without overwriting your custom profile GUIDs.
+> **Note on Windows Terminal**: [`windows/terminal-settings.json`](windows/terminal-settings.json) is provided as a complete reference. If you already have existing profiles, you can copy the `Gruvbox Dark` scheme and `defaults` font block into your own settings without overwriting your custom profile GUIDs. The bundled settings pin no distro-specific profile or starting directory, so the `WSL` profile adapts to whichever distro you have installed.
 
 ---
 
@@ -127,7 +131,7 @@ reload
 | **`grep <pat>`** | WSL2 & Win | Text search (bridges to `Select-String` on Windows) |
 | **`open`** | WSL2 & Win | Open current directory in Windows File Explorer |
 | **`pbcopy`** / **`pbpaste`** | WSL2 & Win | Read/write directly to the Windows system clipboard |
-| **`cdwsl`** | Windows | Jump directly to Ubuntu WSL2 home folder (dynamically detected) |
+| **`cdwsl`** | Windows | Jump to your default WSL distro's home folder (distro & user resolved at runtime) |
 | **`cddoc`** | Windows | Jump directly to Documents folder (supports OneDrive or local Documents) |
 | **`reload`** | WSL2 & Win | Re-source shell profile without restarting terminal window |
 | **`sysclean`** | Windows | Flush DNS and clean temporary system files |
@@ -139,19 +143,31 @@ reload
 
 ## 🔒 Private Overrides & Secrets
 
-To keep work credentials, private API keys, and machine-specific configurations safe from your public Git repository:
+Keep work credentials, private API keys, and machine-specific configuration out of this public repository. Three mechanisms, in order of preference:
 
-* **Linux / WSL2 (`~/.zshrc.local`)**:
-  Create `~/.zshrc.local` for sensitive tokens or company aliases. It is automatically sourced by `.zshrc` and ignored by Git:
+* **Environment variables — Linux / WSL2 (`~/.zshrc.local`)**:
+  Automatically sourced by `.zshrc` if present. It sits outside the repo (`~/` is not a Git repository) and is additionally covered by `.gitignore` (`*.local`, `.zshrc.local`):
   ```zsh
-  export GITHUB_TOKEN="ghp_..."
+  export GITHUB_TOKEN="github_pat_..."
   export OPENAI_API_KEY="sk-..."
   ```
-* **Windows (`~/.profile.local.ps1`)**:
-  Create `$HOME\.profile.local.ps1` for Windows-specific private environment variables or secrets:
+* **Environment variables — Windows (`~/.profile.local.ps1`)**:
+  Automatically sourced by both the PowerShell 7 and 5.1 profiles if present:
   ```powershell
   $env:ANTHROPIC_API_KEY = "sk-ant-..."
   ```
+* **File references for tool configs (`~/.secrets/`, mode `600`)**:
+  Some tools do not substitute environment variables in every field — notably `provider.<name>.options.apiKey` in `opencode.json`, where `{env:...}` is passed through as a literal string. Use `{file:...}` there instead:
+  ```jsonc
+  "apiKey": "{file:~/.secrets/vercel-api-key}"
+  ```
+  ```bash
+  mkdir -p ~/.secrets && chmod 700 ~/.secrets
+  printf '%s' "$KEY" > ~/.secrets/vercel-api-key   # no trailing newline
+  chmod 600 ~/.secrets/vercel-api-key
+  ```
+
+> ⚠️ **Never put a secret in `.zshrc`.** That file is tracked by Git, so a token there is one `dotfiles add -A && dotfiles commit && dotfiles push` away from being published. Rotating a leaked token does not remove copies already written into editor backups, shell history, or pasted chat transcripts — keep secrets out of tracked files from the start.
 
 ---
 
@@ -165,6 +181,8 @@ dotfiles add -A
 dotfiles commit -m "Update aliases"
 dotfiles push
 ```
+
+> **Before pushing:** `add -A` stages *everything* in the repo, so a secret accidentally placed in a tracked file (`.zshrc`, a profile, a config) will be committed along with your real changes. Keep secrets in `~/.zshrc.local`, `~/.profile.local.ps1`, or `~/.secrets/` — see [Private Overrides & Secrets](#-private-overrides--secrets).
 
 ---
 
