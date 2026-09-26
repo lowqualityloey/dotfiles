@@ -41,7 +41,10 @@ $env:STARSHIP_LOG = 'error'
 if (Get-Command starship -ErrorAction SilentlyContinue) {
     Invoke-Expression (&starship init powershell)
 } elseif (Get-Command oh-my-posh -ErrorAction SilentlyContinue) {
-    oh-my-posh init pwsh --config "$HOME\my-posh-theme.omp.json" | Invoke-Expression
+    $PoshTheme = "$HOME\dotfiles\windows\my-posh-theme.omp.json"
+    if (Test-Path $PoshTheme) {
+        oh-my-posh init pwsh --config $PoshTheme | Invoke-Expression
+    }
 }
 
 # ==============================================================================
@@ -65,23 +68,39 @@ if (Get-Command fzf -ErrorAction SilentlyContinue) {
 }
 
 # ==============================================================================
-# 6. Navigation & Directory Bridges
+# 6. Integrations (Chocolatey & Kiro)
+# ==============================================================================
+if ($env:TERM_PROGRAM -eq "kiro") {
+    if (Get-Command kiro -ErrorAction SilentlyContinue) {
+        . "$(kiro --locate-shell-integration-path pwsh)"
+    }
+}
+
+$ChocolateyProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+if (Test-Path($ChocolateyProfile)) {
+    Import-Module "$ChocolateyProfile" -ErrorAction SilentlyContinue
+}
+
+# ==============================================================================
+# 7. Navigation & Directory Bridges
 # ==============================================================================
 function ..    { Set-Location .. }
 function ...   { Set-Location ..\.. }
 function ....  { Set-Location ..\..\.. }
 function cdwsl {
     if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        # Resolve the default distro and its home dynamically (no hardcoded distro or username)
+        $distro  = (wsl.exe -e sh -c 'echo -n $WSL_DISTRO_NAME' 2>$null)
         $wslHome = (wsl.exe -e sh -c 'echo -n $HOME' 2>$null)
-        if ($wslHome -and (Test-Path "\\wsl$\Ubuntu$wslHome")) {
-            Set-Location "\\wsl$\Ubuntu$wslHome"
-            return
+        if ($distro -and $wslHome) {
+            $unc = '\\wsl$\' + $distro + $wslHome
+            if (Test-Path $unc) {
+                Set-Location $unc
+                return
+            }
         }
     }
-    if (Test-Path "\\wsl$\Ubuntu\home\heyloey") {
-        Set-Location "\\wsl$\Ubuntu\home\heyloey"
-        return
-    }
+    # Fallback: open the WSL provider root so any installed distro can be picked
     if (Test-Path "\\wsl$") {
         Set-Location "\\wsl$"
     }
@@ -103,7 +122,7 @@ function touch($path) { New-Item -ItemType File -Path $path -Force }
 function open($path = ".") { explorer.exe $path }
 
 # ==============================================================================
-# 7. Git Shortcuts (Parity with Oh My Zsh)
+# 8. Git Shortcuts (Parity with Oh My Zsh)
 # ==============================================================================
 function gst { git status $args }
 function gp  { git push $args }
@@ -113,7 +132,7 @@ function gcb { git checkout -b $args }
 function lg  { lazygit $args }
 
 # ==============================================================================
-# 8. Profile & Maintenance Helpers
+# 9. Profile & Maintenance Helpers
 # ==============================================================================
 function Edit-Profile {
     if (Get-Command code -ErrorAction SilentlyContinue) { code $PROFILE } else { notepad $PROFILE }
@@ -148,7 +167,7 @@ function Update-AllPackages {
 Set-Alias -Name sysupdate -Value Update-AllPackages
 
 # ==============================================================================
-# 9. Local Machine Overrides & Private Secrets (Gitignored)
+# 10. Local Machine Overrides & Private Secrets (Gitignored)
 # ==============================================================================
 $LocalProfile = Join-Path $HOME ".profile.local.ps1"
 if (Test-Path $LocalProfile) {

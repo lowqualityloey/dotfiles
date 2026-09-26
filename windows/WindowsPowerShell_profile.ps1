@@ -26,16 +26,18 @@ function ...   { Set-Location ..\.. }
 function ....  { Set-Location ..\..\.. }
 function cdwsl {
     if (Get-Command wsl.exe -ErrorAction SilentlyContinue) {
+        # Resolve the default distro and its home dynamically (no hardcoded distro or username)
+        $distro  = (wsl.exe -e sh -c 'echo -n $WSL_DISTRO_NAME' 2>$null)
         $wslHome = (wsl.exe -e sh -c 'echo -n $HOME' 2>$null)
-        if ($wslHome -and (Test-Path "\\wsl$\Ubuntu$wslHome")) {
-            Set-Location "\\wsl$\Ubuntu$wslHome"
-            return
+        if ($distro -and $wslHome) {
+            $unc = '\\wsl$\' + $distro + $wslHome
+            if (Test-Path $unc) {
+                Set-Location $unc
+                return
+            }
         }
     }
-    if (Test-Path "\\wsl$\Ubuntu\home\heyloey") {
-        Set-Location "\\wsl$\Ubuntu\home\heyloey"
-        return
-    }
+    # Fallback: open the WSL provider root so any installed distro can be picked
     if (Test-Path "\\wsl$") {
         Set-Location "\\wsl$"
     }

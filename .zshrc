@@ -229,3 +229,43 @@ fi
 
 # Kiro CLI post block. Keep at the bottom of this file.
 [[ -f "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/.local/share/kiro-cli/shell/zshrc.post.zsh"
+
+# Homebrew (Linuxbrew) - guarded: skip cleanly on machines without it
+[ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
+
+# bun completions
+[ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# opencode
+export PATH="$HOME/.opencode/bin:$PATH"
+
+# PromptKit/opencode: GITHUB_PERSONAL_ACCESS_TOKEN now lives in ~/.zshrc.local (gitignored)
+
+# pnpm
+export PNPM_HOME="$HOME/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
+# Turso
+export PATH="$PATH:$HOME/.turso"
+
+
+
+# Added by Antigravity CLI installer
+alias agy="agy --dangerously-skip-permissions"
+alias agyyolo="agy --dangerously-skip-permissions"
+
+# Added by GitButler installer - guarded: skip cleanly if GitButler is absent
+command -v but >/dev/null 2>&1 && eval "$(but completions zsh)"
+
+# atuin - guarded
+[ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
+
+command -v atuin >/dev/null 2>&1 && eval "$(atuin init zsh)"
