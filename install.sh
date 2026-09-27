@@ -136,4 +136,83 @@ if command -v git >/dev/null 2>&1; then
     fi
 fi
 
+# 8. atuin history_filter: redact the same key shapes from atuin's own database.
+#    Atuin records commands through preexec/precmd, so the zshaddhistory hook in
+#    .zshrc never sees them. Only the history_filter key is touched - every other
+#    line of the user's config is preserved - and a backup is kept. Idempotent.
+echo "--> Configuring atuin history_filter..."
+ATUIN_CFG="$HOME/.config/atuin/config.toml"
+if ! command -v atuin >/dev/null 2>&1; then
+    echo "  [SKIP] atuin not installed; nothing to configure."
+elif [ ! -f "$ATUIN_CFG" ]; then
+    echo "  [SKIP] No atuin config at $ATUIN_CFG yet; run 'atuin' once, then re-run install.sh."
+elif ! command -v python3 >/dev/null 2>&1; then
+    echo "  [WARN] python3 not found; add history_filter to $ATUIN_CFG by hand."
+else
+    helper=$(mktemp)
+    cat > "$helper" <<'PY'
+import os
+import re
+import shutil
+import sys
+from pathlib import Path
+
+# The scanner is the single source of truth for the key shapes, so the filter
+# here can never drift from what check-secret-leaks reports.
+sys.path.insert(0, os.path.join(os.environ["DOTFILES_DIR"], "bin"))
+from secret_scan import PATTERNS  # noqa: E402
+
+path = Path(os.environ["ATUIN_CFG"])
+block = ["history_filter = ["]
+block += [f'  "{pattern.pattern}",  # {label}' for pattern, _repl, label in PATTERNS]
+block.append("]")
+
+lines = path.read_text(encoding="utf-8").splitlines()
+
+# Only a top-level assignment counts; atuin's own commented example is ignored.
+start = next((i for i, line in enumerate(lines)
+              if re.match(r"^history_filter\s*=", line)), None)
+
+if start is None:
+    updated = lines + [""] + block
+else:
+    end = start
+    value = lines[start].split("=", 1)[1]
+    if "[" in value and "]" not in value:  # multi-line array: find its close
+        for j in range(start + 1, len(lines)):
+            if lines[j].lstrip().startswith("]"):
+                end = j
+                break
+        else:
+            end = len(lines) - 1
+    if lines[start:end + 1] == block:
+        print("unchanged")
+        raise SystemExit(0)
+    updated = lines[:start] + block + lines[end + 1:]
+
+backup_dir = os.environ.get("BACKUP_DIR")
+if backup_dir:
+    dest = Path(backup_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(path, dest / "atuin-config.toml")
+
+path.write_text("\n".join(updated) + "\n", encoding="utf-8")
+print("updated")
+PY
+    atuin_result=$(ATUIN_CFG="$ATUIN_CFG" DOTFILES_DIR="$DOTFILES_DIR" BACKUP_DIR="$BACKUP_DIR" \
+        python3 "$helper" 2>/dev/null) || atuin_result="error"
+    rm -f "$helper"
+    case "$atuin_result" in
+        updated)
+            echo "  [OK] history_filter configured in $ATUIN_CFG (previous copy backed up)."
+            ;;
+        unchanged)
+            echo "  [OK] atuin history_filter already configured."
+            ;;
+        *)
+            echo "  [WARN] Could not update $ATUIN_CFG; add history_filter by hand."
+            ;;
+    esac
+fi
+
 echo "==> Dotfiles setup complete! Run 'source ~/.zshrc' to apply."
