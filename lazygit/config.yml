@@ -1,0 +1,18 @@
+# lazygit: render the diff panel through delta, so it matches `git diff` on the
+# command line (same Gruvbox syntax theme and line numbers).
+#
+# lazygit draws diffs itself by default, so this is what makes it agree with the
+# standalone pager. `--paging=never` is required: lazygit pages internally, and
+# delta would otherwise try to page on top of it. Side-by-side is deliberately
+# not enabled here — lazygit's diff panel is narrow, where two columns truncate.
+#
+# Schema note: this uses `git.diffRenderers`, the current key. The older
+# `git.paging` / `pager` form is migrated away by lazygit itself (verified on
+# 0.64.1), so writing it would silently trigger a rewrite on first launch.
+#
+# Windows reads %APPDATA%\lazygit\config.yml instead; install.ps1 writes it there.
+
+git:
+  diffRenderers:
+    - colorArg: always
+      command: delta --paging=never --dark

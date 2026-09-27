@@ -45,8 +45,8 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `zoxide`: Smart directory jumping (`z <folder>`, `zi`).
   * `eza`: Colorized directory listings with Git status and file icons (`ls`, `ll`, `tree`).
   * `bat`: Syntax-highlighted text and code viewer (`cat`).
-  * `lazygit`: Full-screen Git terminal UI (`lg`).
-  * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that, so narrow windows never show truncated columns (config `git/delta.gitconfig`, wrapper `bin/delta-pager`).
+  * `lazygit`: Full-screen Git terminal UI (`lg`), with its diff panel rendered through `delta` so it matches `git diff`.
+  * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that (config `git/delta.gitconfig`, wrapper `bin/delta-pager`). Note that side-by-side truncates individual very long lines at *any* width — delta marks them with `↴` — so a wide window helps but does not eliminate it.
 * **🔁 Portable by Design**:
   * No hardcoded usernames, WSL distro names, or user-specific home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime. (The one absolute path left is Linuxbrew's fixed `/home/linuxbrew/.linuxbrew`, which is identical on every machine that installs it.)
   * Optional tools that may be absent (`brew`, `atuin`, GitButler, `oh-my-posh`) are skipped cleanly instead of erroring on a fresh machine.
@@ -66,6 +66,10 @@ dotfiles/
 ├── TERMINAL_CHEATSHEET.md           # Full CLI and shortcut cheatsheet
 ├── git/
 │   └── delta.gitconfig              # delta pager settings, included from ~/.gitconfig
+├── lazygit/
+│   └── config.yml                   # lazygit renders its diff panel through delta
+├── tests/
+│   └── test-delta-pager.sh          # Regression tests for the pager width threshold
 ├── assets/                          # Demo screenshots and visual assets
 │   ├── ubuntu-wsl2-demo.png
 │   └── powershell-demo.png
@@ -224,6 +228,16 @@ dotfiles push
 ```
 
 > **Before pushing:** `add -A` stages *everything* in the repo, so a secret accidentally placed in a tracked file (`.zshrc`, a profile, a config) will be committed along with your real changes. Keep secrets in `~/.zshrc.local`, `~/.profile.local.ps1`, or `~/.secrets/` — see [Private Overrides & Secrets](#-private-overrides--secrets).
+
+---
+
+## 🧪 Tests
+
+No test framework needed — the pager wrapper's only job is choosing a flag, so its tests stub `delta` and `tput` and assert the arguments it would pass:
+
+```bash
+sh tests/test-delta-pager.sh
+```
 
 ---
 

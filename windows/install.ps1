@@ -116,4 +116,21 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     }
 }
 
+# 6. lazygit diff renderer - parity with the WSL side
+Write-Host "==> Configuring lazygit diff renderer..." -ForegroundColor Cyan
+if (Get-Command lazygit -ErrorAction SilentlyContinue) {
+    $LazygitDir = Join-Path $env:APPDATA "lazygit"
+    if (-not (Test-Path $LazygitDir)) {
+        New-Item -ItemType Directory -Path $LazygitDir -Force | Out-Null
+    }
+    $LazygitCfg = Join-Path $LazygitDir "config.yml"
+    if (Test-Path $LazygitCfg) {
+        Copy-Item $LazygitCfg "$LazygitCfg.backup.$Timestamp" -Force
+    }
+    Copy-Item (Join-Path $DotfilesDir "lazygit\config.yml") $LazygitCfg -Force
+    Write-Host "  [OK] $LazygitCfg updated." -ForegroundColor Green
+} else {
+    Write-Host "  [SKIP] lazygit not installed on Windows; skipping its diff renderer." -ForegroundColor Yellow
+}
+
 Write-Host "==> Windows setup complete! Run 'reload' or restart PowerShell 7." -ForegroundColor Green

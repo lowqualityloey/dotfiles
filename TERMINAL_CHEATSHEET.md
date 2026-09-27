@@ -153,5 +153,6 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 * **Local Machine Overrides**: `~/.zshrc.local` (Linux) and `$HOME\.profile.local.ps1` (Windows)
 * **Tmux Config**: `~/.tmux.conf`
 * **Git Pager**: `delta` with the Gruvbox Dark syntax theme and line numbers; side-by-side at ≥100 columns, unified below (config `git/delta.gitconfig`, wrapper `bin/delta-pager`, included by `~/.gitconfig`)
+* **Git TUI**: `lazygit` draws its diff panel through `delta` too, so it matches the command line (config `lazygit/config.yml`)
 * **Dotfiles Git Repo**: `~/dotfiles` (Synced to `lowqualityloey/dotfiles`)
 * **Safety Backups**: `install.sh` moves any file it replaces into a timestamped `~/.dotfiles_backup_YYYYMMDDHHMMSS/` directory before linking
