@@ -67,4 +67,45 @@ if (Get-Command winget -ErrorAction SilentlyContinue) {
     }
 }
 
+# 5. Git Pager (delta) - parity with the WSL side
+Write-Host "==> Configuring Git pager (delta)..." -ForegroundColor Cyan
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    if (-not (Get-Command delta -ErrorAction SilentlyContinue)) {
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Host "  [WINGET] Installing delta..." -ForegroundColor Yellow
+            winget install --id dandavison.delta --silent --accept-source-agreements --accept-package-agreements 2>$null
+            # winget updates PATH for new sessions only; refresh it so the check below sees delta.
+            $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+        }
+    }
+
+    if (Get-Command delta -ErrorAction SilentlyContinue) {
+        # Same wrapper as install.sh, invoked through `sh` (which Git for Windows
+        # ships), so the width-aware side-by-side logic is shared, not duplicated.
+        # Paths derive from $DotfilesDir so any clone location works; forward slashes
+        # and quoting keep sh happy and survive spaces in the user's profile path.
+        $DotfilesPosix = $DotfilesDir -replace '\\', '/'
+        $DeltaPager = "sh `"$DotfilesPosix/bin/delta-pager`""
+        $DeltaCfg = "$DotfilesPosix/git/delta.gitconfig"
+
+        $currentPager = git config --global --get core.pager 2>$null
+        if ($currentPager -ne $DeltaPager) {
+            git config --global core.pager $DeltaPager
+            Write-Host "  [OK] core.pager set (side-by-side at >=100 columns)." -ForegroundColor Green
+        } else {
+            Write-Host "  [OK] core.pager already set." -ForegroundColor Green
+        }
+
+        $includes = @(git config --global --get-all include.path 2>$null)
+        if ($includes -notcontains $DeltaCfg) {
+            git config --global --add include.path $DeltaCfg
+            Write-Host "  [OK] delta config included from $DeltaCfg." -ForegroundColor Green
+        } else {
+            Write-Host "  [OK] delta config already included." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  [SKIP] delta not installed; keeping the stock Git pager." -ForegroundColor Yellow
+    }
+}
+
 Write-Host "==> Windows setup complete! Run 'reload' or restart PowerShell 7." -ForegroundColor Green

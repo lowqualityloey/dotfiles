@@ -30,7 +30,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * Startup time cut from **2.68s to ~0.7s (~3.8x faster)**, measured with `zsh -i -c exit`.
   * Lazy-loaded NVM and skipped redundant compaudit security checks.
   * 2×2 quad-terminal layout command (`grid`, `grid reset`) with mouse resize and scroll wheel support.
-  * Built-in security guardrails: a `zshaddhistory` hook drops credential-shaped commands before they ever reach `~/.zsh_history` (`HIST_IGNORE_SPACE` stays as a second layer), gitignored `~/.zshrc.local` holds machine-specific secrets, and a daily systemd timer reports any key-shaped strings left behind in agent caches (see [Credential-Leak Monitoring](#-credential-leak-monitoring)).
+  * Built-in security guardrails: a `zshaddhistory` hook drops credential-shaped commands before they ever reach `~/.zsh_history` (`HIST_IGNORE_SPACE` stays as a manual second layer), atuin's `history_filter` redacts the same shapes in its own database (atuin records via `preexec`/`precmd`, so it needs its own filter and the hook never sees it), gitignored `~/.zshrc.local` holds machine-specific secrets, and a daily systemd timer reports any key-shaped strings left behind in agent caches (see [Credential-Leak Monitoring](#-credential-leak-monitoring)).
 * **🪟 Modern Windows Shell (PowerShell 7)**:
   * **UTF-8 console encoding** enforced to eliminate broken emojis, Git logs, and symbols.
   * **PSReadLine Predictive IntelliSense** with Gruvbox muted gray (`#928374`) inline autocompletion (<kbd>Ctrl</kbd> + <kbd>Spacebar</kbd>).
@@ -46,8 +46,9 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `eza`: Colorized directory listings with Git status and file icons (`ls`, `ll`, `tree`).
   * `bat`: Syntax-highlighted text and code viewer (`cat`).
   * `lazygit`: Full-screen Git terminal UI (`lg`).
+  * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that, so narrow windows never show truncated columns (config `git/delta.gitconfig`, wrapper `bin/delta-pager`).
 * **🔁 Portable by Design**:
-  * No hardcoded usernames, WSL distro names, or absolute home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime.
+  * No hardcoded usernames, WSL distro names, or user-specific home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime. (The one absolute path left is Linuxbrew's fixed `/home/linuxbrew/.linuxbrew`, which is identical on every machine that installs it.)
   * Optional tools that may be absent (`brew`, `atuin`, GitButler, `oh-my-posh`) are skipped cleanly instead of erroring on a fresh machine.
 
 ---
@@ -63,14 +64,21 @@ dotfiles/
 ├── .tmux.conf                       # Tmux quad-terminal & ergonomics settings
 ├── install.sh                       # One-click bootstrap installer for Linux / WSL2
 ├── TERMINAL_CHEATSHEET.md           # Full CLI and shortcut cheatsheet
+├── git/
+│   └── delta.gitconfig              # delta pager settings, included from ~/.gitconfig
 ├── assets/                          # Demo screenshots and visual assets
 │   ├── ubuntu-wsl2-demo.png
 │   └── powershell-demo.png
 ├── bin/
 │   ├── cheatsheet                   # Interactive ANSI terminal reference tool
 │   ├── check-secret-leaks           # Flags credential-shaped strings in local logs/caches
+│   ├── delta-pager                  # Width-aware Git pager wrapper for delta
 │   ├── scrub-secrets                # Redacts those strings (dry-run by default)
 │   └── secret_scan.py               # Shared detection patterns for the two tools
+├── zsh/
+│   └── plugins/
+│       └── fzf/
+│           └── fzf.plugin.zsh       # Quiet fzf integration (shadows the oh-my-zsh plugin)
 ├── systemd/
 │   └── user/
 │       ├── secret-leak-check.service
@@ -143,8 +151,8 @@ reload
 | **`check-secret-leaks`** | WSL2 | Report credential-shaped strings in local agent logs/caches (exits 1 if any) |
 | **`scrub-secrets`** | WSL2 | Redact those strings (`--apply`; dry-run by default) |
 | **`reload`** | WSL2 & Win | Re-source shell profile without restarting terminal window |
-| **`sysclean`** | Windows | Flush DNS and clean temporary system files |
-| **`sysupdate`** | Windows | Upgrade all Windows apps via WinGet and Chocolatey |
+| **`sysclean`** | Windows (PS7) | Flush DNS and clean temporary system files |
+| **`sysupdate`** | Windows (PS7) | Upgrade all Windows apps via WinGet and Chocolatey |
 
 *(See [TERMINAL_CHEATSHEET.md](TERMINAL_CHEATSHEET.md) for full documentation).*
 
@@ -182,7 +190,7 @@ Keep work credentials, private API keys, and machine-specific configuration out 
 
 ## 🛡️ Credential-Leak Monitoring
 
-Moving a secret out of a tracked file is not the end of the story. Agent tools (opencode/manicode, Cline, Gemini, Codex, Kiro) persist transcripts, history and search indexes, so any token that appears in a prompt or on a command line is written to disk in several places at once. Shell history is guarded at the source, but tool caches need sweeping.
+Moving a secret out of a tracked file is not the end of the story. Agent tools (opencode/manicode, Cline, Gemini, Codex, Kiro) persist transcripts, history and search indexes, so any token that appears in a prompt or on a command line is written to disk in several places at once. Shell history is guarded at the source — the `zshaddhistory` hook for `~/.zsh_history` and atuin's `history_filter` in `~/.config/atuin/config.toml` for atuin (which records through `preexec`/`precmd`, so a `zshaddhistory` hook alone would not cover it) — but tool caches still need sweeping.
 
 * **`check-secret-leaks`** walks those stores, prints one line per affected file, and exits non-zero when it finds key-shaped strings.
 * **`scrub-secrets`** redacts them — dry-run by default, `--apply` to write. It rewrites SQLite databases in place with `secure_delete` + WAL checkpoint + `VACUUM`, so the old bytes do not survive in free pages.

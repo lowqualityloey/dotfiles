@@ -21,10 +21,15 @@ A complete reference for your customized **Zsh + Oh My Zsh + Starship (Gruvbox R
 | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | Accept inline auto-suggestion without leaving home row | Type partial command, hit shortcut |
 | <kbd>Esc</kbd> <kbd>Esc</kbd> | Automatically prepend `sudo` to current/previous command | Double-tap Escape |
 | **`pbcopy`** | Copy text/command output directly to Windows clipboard | `cat id_rsa.pub \| pbcopy` |
+| **`pbpaste`** | Read the Windows clipboard back into WSL2 (strips trailing CR) | `pbpaste > file.txt` |
 | **`open`** | Open current directory in Windows File Explorer | `open` |
 | **`agy-models`** | List available AI models & reasoning tiers | `agy-models` |
 | **`agy-usage`** | Check token limits and model quotas | `agy-usage` |
-| **`cheatsheet`** | Open this guide directly in your terminal | `cheatsheet` |
+| **`cheatsheet`** | Open this guide directly in your terminal (`cheatsheet --full` for the full manual) | `cheatsheet` |
+| **`dotfiles`** | Run Git against the dotfiles repo from anywhere | `dotfiles status` |
+| **`reload`** | Re-source `~/.zshrc` without restarting the terminal | `reload` |
+| **`check-secret-leaks`** | Report credential-shaped strings in local agent logs/caches (exits `1` if any) | `check-secret-leaks` |
+| **`scrub-secrets`** | Redact those strings (`--apply` to write; dry-run by default) | `scrub-secrets --apply` |
 
 ---
 
@@ -72,17 +77,27 @@ Splits your single terminal window into a 2×2 grid:
 ---
 
 ### 5. Managing Secrets & Private Overrides
-* **Local Machine Config (`~/.zshrc.local` / `$HOME\.profile.local.ps1`)**:
-  Store secret API tokens, private SSH configs, or company aliases in local files. These are automatically loaded by your shell and ignored by Git so they are never pushed:
+
+* **Local machine config (`~/.zshrc.local` / `$HOME\.profile.local.ps1`)**:
+  Store secret API tokens, private SSH configs, or company aliases here. Both files sit outside the repo, are auto-sourced when present, and are gitignored (`*.local`, `.zshrc.local`, `.profile.local.ps1`), so they are never pushed:
   ```zsh
   # In ~/.zshrc.local (WSL2 / Linux):
   export OPENAI_API_KEY="sk-..."
-  export GITHUB_TOKEN="ghp_..."
+  export GITHUB_TOKEN="github_pat_..."
   ```
-* **Secret History Protection**:
-  Any command beginning with a **space** is excluded from shell history:
+* **File-backed secrets for tool configs (`~/.secrets/`, mode `600`)**:
+  Some tools pass `{env:...}` through as a literal string instead of substituting it — notably `provider.<name>.options.apiKey` in `opencode.json`. Point those at a file instead:
+  ```jsonc
+  "apiKey": "{file:~/.secrets/vercel-api-key}"
+  ```
+* **History protection is automatic now**:
+  A `zshaddhistory` hook drops any command containing `github_pat_`, `sk-proj-`, `sk-or-v1-`, or `vck_` before it can reach `~/.zsh_history`, and atuin applies the same patterns through `history_filter` in `~/.config/atuin/config.toml`. Leading-space (`HIST_IGNORE_SPACE`) still works as a manual fallback, but it only protects you if you remember the space — which is why the automatic guard exists. Prefer storing secrets in a file over typing them on a command line.
+* **Sweep what already leaked**:
+  History guards cannot reach agent caches (opencode/manicode, Cline, Gemini, Codex, Kiro transcripts, search indexes and SQLite stores), so those need an explicit pass:
   ```zsh
-   export API_KEY="sk-..."    # Note leading space: never saved to ~/.zsh_history!
+  check-secret-leaks      # report key-shaped strings in those stores (exits 1 if any)
+  scrub-secrets           # show what would be redacted
+  scrub-secrets --apply   # actually redact (text, binaries and SQLite; Windows side too)
   ```
 
 ---
@@ -137,5 +152,6 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 * **PowerShell 7 Config (Windows)**: `$PROFILE` (e.g. `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`)
 * **Local Machine Overrides**: `~/.zshrc.local` (Linux) and `$HOME\.profile.local.ps1` (Windows)
 * **Tmux Config**: `~/.tmux.conf`
+* **Git Pager**: `delta` with the Gruvbox Dark syntax theme and line numbers; side-by-side at ≥100 columns, unified below (config `git/delta.gitconfig`, wrapper `bin/delta-pager`, included by `~/.gitconfig`)
 * **Dotfiles Git Repo**: `~/dotfiles` (Synced to `lowqualityloey/dotfiles`)
-* **Safety Backups**: `~/.zshrc.backup.*` and `~/.config/starship.toml.backup.*`
+* **Safety Backups**: `install.sh` moves any file it replaces into a timestamped `~/.dotfiles_backup_YYYYMMDDHHMMSS/` directory before linking

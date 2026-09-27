@@ -144,6 +144,10 @@ alias agy-usage="agy -i '/usage'"
 # WSL2 Quality-of-Life Integrations
 alias pbcopy="clip.exe"
 alias open="explorer.exe ."
+# Read the Windows clipboard back into WSL2 (strip the CR that PowerShell leaves behind)
+pbpaste() {
+    powershell.exe -NoProfile -NoLogo -Command Get-Clipboard 2>/dev/null | tr -d '\r'
+}
 
 # Modern CLI Tool Replacements (eza, bat, lazygit)
 if command -v eza >/dev/null 2>&1; then

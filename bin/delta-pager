@@ -1,0 +1,31 @@
+#!/bin/sh
+# Git pager: delta, with side-by-side enabled only when the terminal is wide
+# enough to render it legibly.
+#
+# Deliberately POSIX sh (no bashisms) so the same file also runs under Git for
+# Windows' sh. git config points core.pager at it on both platforms:
+#     core.pager = sh $HOME/dotfiles/bin/delta-pager
+# which is why it relies on the documented $HOME/dotfiles clone location and
+# avoids ~/.local/bin (that PATH entry does not exist on the Windows side).
+#
+# Below ~100 columns each side gets roughly 40 characters and delta has to
+# truncate mid-word (flagging it with '↴' and '…'), which reads worse than a
+# plain unified diff. So the layout decision lives here rather than in
+# git/delta.gitconfig, where `side-by-side = true` would apply at every width.
+#
+# Override the threshold with DELTA_SIDE_BY_SIDE_MIN_COLS.
+
+set -eu
+
+MIN_COLS="${DELTA_SIDE_BY_SIDE_MIN_COLS:-100}"
+
+# COLUMNS is not exported by every shell; ask the terminal, then fall back to a
+# conservative 80 (unified diff) so an unknown size never breaks paging.
+cols="${COLUMNS:-}"
+case "$cols" in '' | *[!0-9]*) cols="$(tput cols 2>/dev/null || true)" ;; esac
+case "$cols" in '' | *[!0-9]*) cols=80 ;; esac
+
+if [ "$cols" -ge "$MIN_COLS" ]; then
+	exec delta --side-by-side "$@"
+fi
+exec delta "$@"
