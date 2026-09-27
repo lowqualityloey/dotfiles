@@ -80,13 +80,21 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     }
 
     if (Get-Command delta -ErrorAction SilentlyContinue) {
-        # Same wrapper as install.sh, invoked through `sh` (which Git for Windows
-        # ships), so the width-aware side-by-side logic is shared, not duplicated.
-        # Paths derive from $DotfilesDir so any clone location works; forward slashes
-        # and quoting keep sh happy and survive spaces in the user's profile path.
+        # Same wrapper as install.sh, so the width-aware side-by-side logic is shared.
+        # It needs a shell, and a bare `sh` is NOT resolvable inside the shell git
+        # uses to run pagers - only Windows PATH entries are, which is why `delta`
+        # resolves there but `sh` does not. So invoke Git's bundled sh by absolute
+        # path. Falls back to plain delta if that layout ever changes.
         $DotfilesPosix = $DotfilesDir -replace '\\', '/'
-        $DeltaPager = "sh `"$DotfilesPosix/bin/delta-pager`""
         $DeltaCfg = "$DotfilesPosix/git/delta.gitconfig"
+        $GitSh = Join-Path (Split-Path -Parent (Split-Path -Parent (Get-Command git).Source)) "usr\bin\sh.exe"
+        if (Test-Path $GitSh) {
+            $GitShPosix = $GitSh -replace '\\', '/'
+            $DeltaPager = "`"$GitShPosix`" `"$DotfilesPosix/bin/delta-pager`""
+        } else {
+            Write-Host "  [WARN] Git's bundled sh not found; using delta without the width-aware wrapper." -ForegroundColor Yellow
+            $DeltaPager = "delta"
+        }
 
         $currentPager = git config --global --get core.pager 2>$null
         if ($currentPager -ne $DeltaPager) {
