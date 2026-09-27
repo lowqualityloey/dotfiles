@@ -5,6 +5,7 @@
 ![Prompt](https://img.shields.io/badge/Prompt-Starship%20Rainbow-83a598?color=282828&labelColor=3c3836)
 ![OS](https://img.shields.io/badge/OS-Ubuntu%2024.04%20(WSL2)%20%2B%20Windows%2011-b8bb26?color=282828&labelColor=3c3836)
 ![License](https://img.shields.io/badge/License-MIT-fabd2f?color=282828&labelColor=3c3836)
+[![CI](https://img.shields.io/github/actions/workflow/status/lowqualityloey/dotfiles/tests.yml?branch=main&label=CI&labelColor=3c3836)](https://github.com/lowqualityloey/dotfiles/actions/workflows/tests.yml)
 
 A unified, high-performance, cross-platform terminal environment optimized for developer productivity across **Ubuntu 24.04 (WSL2)** and **Windows 11 (PowerShell 7)**.
 
@@ -23,21 +24,21 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 ## ✨ Features at a Glance
 
 * **🎨 Unified Visual Design**:
-  * **Gruvbox Dark (`#282828`)** palette unified across Windows Terminal, Antigravity IDE, and VS Code.
+  * **Gruvbox Dark (`#282828`)** palette, shipped for Windows Terminal in `windows/terminal-settings.json` (the `Gruvbox Dark` scheme plus the Nerd Font defaults). The IDE palettes are configured in the IDEs themselves and are not part of this repo.
   * **Typography**: `JetBrainsMono Nerd Font` with full symbol support.
   * **Shared Prompt**: **Starship** with the Gruvbox Rainbow preset and a compact 12-hour AM/PM clock (`5:35pm`) across both Linux and Windows.
 * **⚡ Blazing Fast Linux Shell (WSL2 Zsh)**:
   * Startup time cut from **2.68s to ~0.7s (~3.8x faster)**, measured with `zsh -i -c exit`.
   * Lazy-loaded NVM and skipped redundant compaudit security checks.
   * 2×2 quad-terminal layout command (`grid`, `grid reset`) with mouse resize and scroll wheel support.
-  * Built-in security guardrails: a `zshaddhistory` hook drops credential-shaped commands before they ever reach `~/.zsh_history` (`HIST_IGNORE_SPACE` stays as a manual second layer), atuin's `history_filter` redacts the same shapes in its own database (atuin records via `preexec`/`precmd`, so it needs its own filter and the hook never sees it), gitignored `~/.zshrc.local` holds machine-specific secrets, and a daily systemd timer reports any key-shaped strings left behind in agent caches (see [Credential-Leak Monitoring](#-credential-leak-monitoring)).
+  * Built-in security guardrails: a `zshaddhistory` hook drops credential-shaped commands before they ever reach `~/.zsh_history` (`HIST_IGNORE_SPACE` stays as a manual second layer), if you use atuin, `install.sh` writes a matching `history_filter` into `~/.config/atuin/config.toml` (atuin records via `preexec`/`precmd`, so the hook never sees it); gitignored `~/.zshrc.local` holds machine-specific secrets, and a daily systemd timer reports any key-shaped strings left behind in agent caches (see [Credential-Leak Monitoring](#-credential-leak-monitoring)).
 * **🪟 Modern Windows Shell (PowerShell 7)**:
   * **UTF-8 console encoding** enforced to eliminate broken emojis, Git logs, and symbols.
   * **PSReadLine Predictive IntelliSense** with Gruvbox muted gray (`#928374`) inline autocompletion (<kbd>Ctrl</kbd> + <kbd>Spacebar</kbd>).
   * **Microsoft `CompletionPredictor`** for intelligent command line argument predictions.
   * **`Terminal-Icons`** for rich file & directory glyphs in `ls` and `dir`.
   * **Deep Git Tab Completion** via `posh-git`.
-  * **Linux/Zsh Parity Bridges**: `which`, `grep`, `touch`, `open`, `pbcopy`/`pbpaste`, `cdwsl`, and git aliases (`gst`, `gp`, `gl`, `gco`, `gcb`, `lg`).
+  * **Linux/Zsh Parity Bridges**: `which`, `grep`, `touch`, `open`, `pbcopy`/`pbpaste`, `cdwsl`, and git helpers (`gst`, `gp`, `gl`, `gco`, `gcb`) plus `lg` for LazyGit.
   * **Kiro & Chocolatey Integration**: Sources the Kiro shell integration when `$env:TERM_PROGRAM` is `kiro`, and loads `chocolateyProfile.psm1` when present.
   * **Private Overrides**: Automatically loads gitignored `$HOME/.profile.local.ps1` if present.
 * **🔍 Modern Rust CLI Suite**:
@@ -63,13 +64,21 @@ dotfiles/
 ├── starship.toml                    # Shared Starship Gruvbox Rainbow configuration
 ├── .tmux.conf                       # Tmux quad-terminal & ergonomics settings
 ├── install.sh                       # One-click bootstrap installer for Linux / WSL2
+├── requirements-dev.txt             # Pinned pytest for the test suite (dev only)
+├── README.md                        # This file
 ├── TERMINAL_CHEATSHEET.md           # Full CLI and shortcut cheatsheet
 ├── git/
 │   └── delta.gitconfig              # delta pager settings, included from ~/.gitconfig
 ├── lazygit/
 │   └── config.yml                   # lazygit renders its diff panel through delta
+├── .github/
+│   └── workflows/
+│       └── tests.yml                # Test suite + lint on main, wip/**, and pull requests
 ├── tests/
-│   └── test-delta-pager.sh          # Regression tests for the pager width threshold
+│   ├── run.sh                       # Runs the tests and lints the shell scripts
+│   ├── test-delta-pager.sh          # Regression tests for the pager width threshold
+│   ├── test-secret-leaks.sh         # Regression tests for the credential-leak scanner
+│   └── test_secret_scan.py          # Unit tests for the shared scan module
 ├── assets/                          # Demo screenshots and visual assets
 │   ├── ubuntu-wsl2-demo.png
 │   └── powershell-demo.png
@@ -196,11 +205,21 @@ Keep work credentials, private API keys, and machine-specific configuration out 
 
 ## 🛡️ Credential-Leak Monitoring
 
-Moving a secret out of a tracked file is not the end of the story. Agent tools (opencode/manicode, Cline, Gemini, Codex, Kiro) persist transcripts, history and search indexes, so any token that appears in a prompt or on a command line is written to disk in several places at once. Shell history is guarded at the source — the `zshaddhistory` hook for `~/.zsh_history` and atuin's `history_filter` in `~/.config/atuin/config.toml` for atuin (which records through `preexec`/`precmd`, so a `zshaddhistory` hook alone would not cover it) — but tool caches still need sweeping.
+Moving a secret out of a tracked file is not the end of the story. Agent tools (opencode/manicode, Cline, Gemini, Codex, Kiro) persist transcripts, history and search indexes, so any token that appears in a prompt or on a command line is written to disk in several places at once. Shell history is guarded at the source by the `zshaddhistory` hook, but tool caches still need sweeping. Atuin records through `preexec`/`precmd`, so the hook alone would not cover it — `install.sh` therefore writes a matching `history_filter` into `~/.config/atuin/config.toml` (idempotent, previous copy backed up, only that key touched). The patterns are imported from `bin/secret_scan.py`, so they cannot drift from what the scanner reports:
+
+```toml
+# ~/.config/atuin/config.toml
+history_filter = [
+  "github_pat_[A-Za-z0-9_]{20,}",  # GitHub PAT
+  "sk-proj-[A-Za-z0-9_-]{30,}",  # OpenAI key
+  "sk-or-v1-[A-Za-z0-9]{40,}",  # OpenRouter key
+  "vck_[A-Za-z0-9]{40,}",  # Vercel key
+]
+```
 
 * **`check-secret-leaks`** walks those stores, prints one line per affected file, and exits non-zero when it finds key-shaped strings.
 * **`scrub-secrets`** redacts them — dry-run by default, `--apply` to write. It rewrites SQLite databases in place with `secure_delete` + WAL checkpoint + `VACUUM`, so the old bytes do not survive in free pages.
-* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; that finishes in about a second, versus roughly a minute for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped).
+* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; measured on a WSL2 machine that finished in 5–12s, versus about 79s for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped). Both figures scale with how much those caches have grown.
 * **Daily timer**: `install.sh` installs `secret-leak-check.timer`, which runs the check once a day and records the result in the user journal.
 
 ```bash
@@ -213,6 +232,8 @@ journalctl --user -u secret-leak-check --since yesterday
 ```
 
 > Findings make the unit exit non-zero on purpose, so `systemctl --user status secret-leak-check` reports it as *failed* — that is the alarm, not a bug. Legitimate credential stores (`~/.secrets/`, `~/.zshrc.local`, tool-managed auth files, and live configs that intentionally hold a key) are skipped; add `--include-stores` to include them. Both tools use `rg` when present and fall back to a Python walk otherwise.
+
+> **A running agent can put the token back.** Redaction only rewrites what is on disk. A still-running agent session or IDE that holds the token in memory will re-persist it on its next write, and the next scan will flag the same file again — so a re-scrub that appears not to stick means the source is still live, not that the scrub failed. Stop the session first, then scrub, and **rotate the credential either way**: it sat in plaintext on disk, so treat it as exposed rather than relying on cleanup.
 
 ---
 
@@ -233,17 +254,47 @@ dotfiles push
 
 ## 🧪 Tests
 
-No test framework needed — the pager wrapper's only job is choosing a flag, so its tests stub `delta` and `tput` and assert the arguments it would pass:
+No test framework is required — each test under `tests/` is a self-contained script that exits non-zero on failure. `tests/run.sh` discovers and runs them all, then lints the shell scripts with `shellcheck`, and fails if anything is wrong:
 
 ```bash
-sh tests/test-delta-pager.sh
+sh tests/run.sh            # full output
+sh tests/run.sh --quiet    # only failures and the summary
 ```
 
-The shell scripts are kept `shellcheck`-clean:
+A full run prints a `== <name> ==` banner per check, that check's own output, an `ok:`/`FAILED:` line, and a final tally:
 
-```bash
-shellcheck install.sh bin/delta-pager bin/cheatsheet tests/test-delta-pager.sh
+```text
+== test-delta-pager.sh ==
+...
+ok: test-delta-pager.sh
+
+== test-secret-leaks.sh ==
+...
+ok: test-secret-leaks.sh
+
+Python tests: pytest 9.1.1
+
+== test_secret_scan.py [pytest] ==
+5 passed in 0.04s
+ok: test_secret_scan.py [pytest]
+
+== shellcheck ==
+ok: shellcheck
+
+4 check(s) run, 0 failed
 ```
+
+Flags and overrides:
+
+* `-q`, `--quiet` — print only failures and the summary.
+* `-h`, `--help` — show usage.
+* `PYTHON=/path/to/python3` — run the Python tests with a different interpreter.
+
+The runner discovers `tests/test-*.sh` (run with `sh`) and `tests/test_*.py` (run with `pytest` when it is importable, otherwise plainly with `python3`), so a new test only has to be dropped in the directory and any single test can still be run directly. When pytest is used the runner names the version it picked (`Python tests: pytest 9.1.1`); `requirements-dev.txt` pins that version — install it with `python3 -m pip install -r requirements-dev.txt`, or point `PYTHON` at a virtualenv that already has it. The lint step covers `install.sh`, every `sh`/`bash` script in `bin/`, and the tests themselves; it is skipped with a note when `shellcheck` is not installed.
+
+The suite also runs in CI on pushes to `main` and `wip/**` branches, and on pull requests — see `.github/workflows/tests.yml`. It reports one stable status check, `CI / tests`, that branch protection can require. The job installs pytest so the pytest path is exercised, and asserts `shellcheck` is present so a green run always includes the lint.
+
+The pager wrapper's only job is choosing a flag, so its tests stub `delta` and `tput` and assert the arguments it would pass. The credential-leak scanner's tests build token-shaped fakes in a temp directory and round-trip them through `check-secret-leaks` and `scrub-secrets`, while `test_secret_scan.py` monkeypatches the shared module to pin down Windows-profile resolution and the `WALK_SKIP` pruning. Nothing touches a real home directory, secret, Windows profile, or the network.
 
 ---
 

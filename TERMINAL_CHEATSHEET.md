@@ -91,7 +91,7 @@ Splits your single terminal window into a 2×2 grid:
   "apiKey": "{file:~/.secrets/vercel-api-key}"
   ```
 * **History protection is automatic now**:
-  A `zshaddhistory` hook drops any command containing `github_pat_`, `sk-proj-`, `sk-or-v1-`, or `vck_` before it can reach `~/.zsh_history`, and atuin applies the same patterns through `history_filter` in `~/.config/atuin/config.toml`. Leading-space (`HIST_IGNORE_SPACE`) still works as a manual fallback, but it only protects you if you remember the space — which is why the automatic guard exists. Prefer storing secrets in a file over typing them on a command line.
+  A `zshaddhistory` hook drops any command containing `github_pat_`, `sk-proj-`, `sk-or-v1-`, or `vck_` before it can reach `~/.zsh_history`, and, if you use atuin, `install.sh` writes the same patterns into a `history_filter` in `~/.config/atuin/config.toml` (atuin records via `preexec`/`precmd`, so the hook never sees those commands). Leading-space (`HIST_IGNORE_SPACE`) still works as a manual fallback, but it only protects you if you remember the space — which is why the automatic guard exists. Prefer storing secrets in a file over typing them on a command line.
 * **Sweep what already leaked**:
   History guards cannot reach agent caches (opencode/manicode, Cline, Gemini, Codex, Kiro transcripts, search indexes and SQLite stores), so those need an explicit pass:
   ```zsh
