@@ -81,7 +81,7 @@ echo "  [OK] Installed quiet fzf plugin."
 
 # 5. Summary check of CLI tools
 echo "--> Checking CLI suite..."
-for tool in starship zoxide fzf eza bat lazygit tmux; do
+for tool in starship zoxide fzf fd eza bat lazygit tmux procs sd ouch tldr; do
     if command -v "$tool" >/dev/null 2>&1 || command -v "${tool}cat" >/dev/null 2>&1; then
         echo "  [OK] $tool is installed."
     else
