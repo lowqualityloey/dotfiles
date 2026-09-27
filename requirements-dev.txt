@@ -1,0 +1,8 @@
+# Development-only dependencies for the test suite.
+#
+# tests/run.sh runs tests/test_*.py through pytest when it is importable and
+# falls back to plain python3 otherwise, so pytest is optional for local runs.
+# It is pinned here so CI (and anyone reproducing it) gets the same version.
+#
+#     python3 -m pip install -r requirements-dev.txt
+pytest==9.1.1

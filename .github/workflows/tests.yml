@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  # The default branch plus wip/** scratch branches. Other feature-branch pushes
+  # that already have an open PR fire the pull_request run alone, not both.
+  push:
+    branches: [main, "wip/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Stable, descriptive check name: branch protection can require "CI / tests"
+    # without it moving when the runner image or the steps below change.
+    name: tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Installed from the pinned dev requirements so tests/test_secret_scan.py
+      # runs through pytest rather than the plain-python3 fallback.
+      - name: Install dev dependencies
+        run: python -m pip install --quiet -r requirements-dev.txt
+
+      # run.sh skips the lint step when shellcheck is missing, which would let
+      # CI go green without linting. Fail loudly if it is not on the runner.
+      - name: Ensure shellcheck is available
+        run: shellcheck --version
+
+      - name: Run tests and lint
+        env:
+          PYTHON: python
+        run: sh tests/run.sh
