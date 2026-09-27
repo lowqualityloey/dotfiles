@@ -35,7 +35,10 @@ link_file "$DOTFILES_DIR/starship.toml" "$HOME/.config/starship.toml"
 link_file "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
 link_file "$DOTFILES_DIR/TERMINAL_CHEATSHEET.md" "$HOME/TERMINAL_CHEATSHEET.md"
 link_file "$DOTFILES_DIR/bin/cheatsheet" "$HOME/.local/bin/cheatsheet"
-chmod +x "$DOTFILES_DIR/bin/cheatsheet" 2>/dev/null || true
+link_file "$DOTFILES_DIR/bin/scrub-secrets" "$HOME/.local/bin/scrub-secrets"
+link_file "$DOTFILES_DIR/bin/check-secret-leaks" "$HOME/.local/bin/check-secret-leaks"
+chmod +x "$DOTFILES_DIR"/bin/cheatsheet "$DOTFILES_DIR"/bin/scrub-secrets "$DOTFILES_DIR"/bin/check-secret-leaks 2>/dev/null || true
+# secret_scan.py is imported next to the real script, so the symlinks above work.
 
 # 3. Check Oh My Zsh
 ZSH_DIR="${ZSH:-$HOME/.oh-my-zsh}"
@@ -76,5 +79,20 @@ for tool in starship zoxide fzf eza bat lazygit tmux; do
         echo "  [OPTIONAL] $tool is not installed yet (install for the full experience)."
     fi
 done
+
+# 6. systemd user timer for the periodic credential-leak check
+echo "--> Installing credential-leak check timer..."
+if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
+    UNIT_DIR="$HOME/.config/systemd/user"
+    mkdir -p "$UNIT_DIR"
+    cp "$DOTFILES_DIR/systemd/user/secret-leak-check.service" "$UNIT_DIR/"
+    cp "$DOTFILES_DIR/systemd/user/secret-leak-check.timer" "$UNIT_DIR/"
+    systemctl --user daemon-reload
+    systemctl --user enable --now secret-leak-check.timer \
+        && echo "  [OK] Timer enabled. Inspect with: systemctl --user list-timers secret-leak-check.timer" \
+        || echo "  [WARN] Could not enable the timer; run 'systemctl --user enable --now secret-leak-check.timer' manually."
+else
+    echo "  [SKIP] No systemd user session; run 'check-secret-leaks' manually or add a cron entry."
+fi
 
 echo "==> Dotfiles setup complete! Run 'source ~/.zshrc' to apply."

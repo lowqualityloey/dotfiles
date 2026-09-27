@@ -204,6 +204,19 @@ setopt HIST_REDUCE_BLANKS     # Remove extra whitespace from history
 setopt HIST_EXPIRE_DUPS_FIRST # Expire oldest duplicates first when trimming
 setopt HIST_FIND_NO_DUPS      # Don't display duplicates when cycling history
 
+# Never write credential-shaped commands to ~/.zsh_history at all.
+# HIST_IGNORE_SPACE only protects you if you remember the leading space; this
+# guards whether or not you do. Returning non-zero from zshaddhistory drops the
+# line before it is added to the history buffer.
+autoload -Uz add-zsh-hook
+_block_secrets_from_history() {
+    case $1 in
+        *github_pat_*|*sk-proj-*|*sk-or-v1-*|*vck_*) return 1 ;;
+    esac
+    return 0
+}
+add-zsh-hook zshaddhistory _block_secrets_from_history
+
 # Autosuggestions Ergonomics (Ctrl+Space to accept, Gruvbox muted color)
 bindkey '^ ' autosuggest-accept
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#928374"
