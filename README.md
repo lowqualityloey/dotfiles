@@ -82,7 +82,9 @@ dotfiles/
 ├── tests/
 │   ├── run.sh                       # Runs the tests and lints the shell scripts
 │   ├── test-delta-pager.sh          # Regression tests for the pager width threshold
+│   ├── test-install-atuin.sh        # Regression tests for the installer's atuin step
 │   ├── test-secret-leaks.sh         # Regression tests for the credential-leak scanner
+│   ├── test-zsh-startup.sh          # Checks an interactive shell starts without parse errors
 │   └── test_secret_scan.py          # Unit tests for the shared scan module
 ├── assets/                          # Demo screenshots and visual assets
 │   ├── ubuntu-wsl2-demo.png
@@ -277,9 +279,17 @@ A full run prints a `== <name> ==` banner per check, that check's own output, an
 ...
 ok: test-delta-pager.sh
 
+== test-install-atuin.sh ==
+...
+ok: test-install-atuin.sh
+
 == test-secret-leaks.sh ==
 ...
 ok: test-secret-leaks.sh
+
+== test-zsh-startup.sh ==
+...
+ok: test-zsh-startup.sh
 
 Python tests: pytest 9.1.1
 
@@ -290,7 +300,7 @@ ok: test_secret_scan.py [pytest]
 == shellcheck ==
 ok: shellcheck
 
-4 check(s) run, 0 failed
+6 check(s) run, 0 failed
 ```
 
 Flags and overrides:
@@ -303,7 +313,13 @@ The runner discovers `tests/test-*.sh` (run with `sh`) and `tests/test_*.py` (ru
 
 The suite also runs in CI on pushes to `main` and `wip/**` branches, and on pull requests — see `.github/workflows/tests.yml`. It reports one stable status check, `CI / tests`, that branch protection can require. The job installs pytest so the pytest path is exercised, and asserts `shellcheck` is present so a green run always includes the lint.
 
-The pager wrapper's only job is choosing a flag, so its tests stub `delta` and `tput` and assert the arguments it would pass. The credential-leak scanner's tests build token-shaped fakes in a temp directory and round-trip them through `check-secret-leaks` and `scrub-secrets`, while `test_secret_scan.py` monkeypatches the shared module to pin down Windows-profile resolution and the `WALK_SKIP` pruning. Nothing touches a real home directory, secret, Windows profile, or the network.
+The pager wrapper's only job is choosing a flag, so its tests stub `delta` and `tput` and assert the arguments it would pass. The credential-leak scanner's tests build token-shaped fakes in a temp directory and round-trip them through `check-secret-leaks` and `scrub-secrets`, while `test_secret_scan.py` monkeypatches the shared module to pin down Windows-profile resolution and the `WALK_SKIP` pruning.
+
+`test-zsh-startup.sh` guards against the one failure mode that is otherwise invisible: zsh abandons the rest of `.zshrc` at the first parse error and still exits 0, so a broken config looks like a working one. It first checks the file against synthetic broken and clean fixtures, so the detector itself is known to work rather than assumed to, then starts a real interactive shell against a *copy* of the config in a temporary `ZDOTDIR` and asserts the run reaches the end and leaves stderr empty. Defining a function over an existing alias — which oh-my-zsh's git plugin makes easy to hit — is one of the cases it reproduces deliberately.
+
+`test-install-atuin.sh` covers the installer step that rewrites `history_filter` in your hand-edited atuin config, the only step that edits a key inside a user file. It runs the whole installer inside a throwaway sandbox — temp `HOME`, a short `PATH` of symlinks, stubbed `atuin` and `systemctl`, and a pre-made oh-my-zsh — then asserts the write is idempotent, that a backup holds the pre-change bytes, that a stale filter is replaced in place while neighbouring sections survive, that the result still parses as TOML, and that every written pattern compiles as a regex and matches `bin/secret_scan.py` exactly. It skips when `python3` predates `tomllib`.
+
+Nothing in the suite touches a real home directory, secret, Windows profile, the network, or your live shell config; the two new tests skip with a note when `zsh`, oh-my-zsh, or a suitable `python3` is missing, so a reduced CI runner loses coverage rather than reporting a false failure.
 
 ---
 
