@@ -13,25 +13,41 @@ if (-not (Test-Path $ProfileDir)) {
     New-Item -ItemType Directory -Path $ProfileDir -Force | Out-Null
 }
 
-$ProfileSrc = Join-Path $WindowsDir "Microsoft.PowerShell_profile.ps1"
-if (Test-Path $PROFILE) {
-    $BackupProfile = "$PROFILE.backup.$Timestamp"
-    Write-Host "  [BACKUP] Existing profile backed up to $BackupProfile" -ForegroundColor Yellow
-    Copy-Item $PROFILE $BackupProfile -Force
+# Copy a profile into place, backing up the previous one only when it actually
+# differs. Re-running the installer on an up-to-date machine then leaves the
+# backup folder alone instead of piling up identical copies of itself.
+function Install-Profile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    if (Test-Path $Destination) {
+        $current = (Get-FileHash $Destination -Algorithm SHA256).Hash
+        $wanted = (Get-FileHash $Source -Algorithm SHA256).Hash
+        if ($current -eq $wanted) {
+            Write-Host "  [OK] $Destination is already current ($Label)." -ForegroundColor Green
+            return
+        }
+        $BackupProfile = "$Destination.backup.$Timestamp"
+        Write-Host "  [BACKUP] Existing profile backed up to $BackupProfile" -ForegroundColor Yellow
+        Copy-Item $Destination $BackupProfile -Force
+    }
+
+    Copy-Item $Source $Destination -Force
+    Write-Host "  [LINKED] $Destination updated ($Label)." -ForegroundColor Green
 }
-Copy-Item $ProfileSrc $PROFILE -Force
-Write-Host "  [LINKED] $PROFILE updated (PowerShell 7)." -ForegroundColor Green
+
+$ProfileSrc = Join-Path $WindowsDir "Microsoft.PowerShell_profile.ps1"
+Install-Profile -Source $ProfileSrc -Destination $PROFILE -Label "PowerShell 7"
 
 # 1b. Windows PowerShell 5.1 Profile Setup
 $WinPSDir = Join-Path (Split-Path -Parent $ProfileDir) "WindowsPowerShell"
 if (Test-Path $WinPSDir) {
     $WinPSProfile = Join-Path $WinPSDir "Microsoft.PowerShell_profile.ps1"
     $WinPSSrc = Join-Path $WindowsDir "WindowsPowerShell_profile.ps1"
-    if (Test-Path $WinPSProfile) {
-        Copy-Item $WinPSProfile "$WinPSProfile.backup.$Timestamp" -Force
-    }
-    Copy-Item $WinPSSrc $WinPSProfile -Force
-    Write-Host "  [LINKED] $WinPSProfile updated (Windows PowerShell 5.1)." -ForegroundColor Green
+    Install-Profile -Source $WinPSSrc -Destination $WinPSProfile -Label "Windows PowerShell 5.1"
 }
 
 # 2. Starship Config Setup
@@ -58,9 +74,12 @@ foreach ($mod in $Modules) {
 }
 
 # 4. Optional CLI Tools via WinGet
-Write-Host "==> Checking CLI Tools (Starship, Zoxide, FZF)..." -ForegroundColor Cyan
+Write-Host "==> Checking CLI Tools (Starship, Zoxide, FZF, procs, tealdeer)..." -ForegroundColor Cyan
 if (Get-Command winget -ErrorAction SilentlyContinue) {
-    $Tools = @("Starship.Starship", "ajeetdsouza.zoxide", "junegunn.fzf")
+    # procs and tealdeer are the WSL-side Rust CLI tools that also exist on
+    # winget; ouch and sd are Linux-only, so they are not listed here.
+    $Tools = @("Starship.Starship", "ajeetdsouza.zoxide", "junegunn.fzf",
+               "dalance.procs", "dbrgn.tealdeer")
     foreach ($tool in $Tools) {
         Write-Host "  [WINGET] Ensuring $tool is installed..." -ForegroundColor Yellow
         winget install --id $tool --silent --accept-source-agreements --accept-package-agreements 2>$null
