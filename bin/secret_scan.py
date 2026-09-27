@@ -21,8 +21,14 @@ from pathlib import Path
 HOME = Path.home()
 
 # (compiled pattern, replacement used when scrubbing, human label)
+#
+# GitHub fine-grained PATs are 93 characters: the 11-character "github_pat_"
+# prefix plus 82 of [A-Za-z0-9_]. Matching that real length matters - a loose
+# "{20,}" also matches documentation examples and test fixtures, which showed
+# up as a daily false alarm in an agent transcript. Re-check this if GitHub
+# ever changes the format.
 PATTERNS = [
-    (re.compile(r"github_pat_[A-Za-z0-9_]{20,}"), "github_pat_REDACTED", "GitHub PAT"),
+    (re.compile(r"github_pat_[A-Za-z0-9_]{82}"), "github_pat_REDACTED", "GitHub PAT"),
     (re.compile(r"sk-proj-[A-Za-z0-9_-]{30,}"), "sk-proj-REDACTED", "OpenAI key"),
     (re.compile(r"sk-or-v1-[A-Za-z0-9]{40,}"), "sk-or-v1-REDACTED", "OpenRouter key"),
     (re.compile(r"vck_[A-Za-z0-9]{40,}"), "vck_REDACTED", "Vercel key"),

@@ -25,7 +25,7 @@ sys.path.insert(0, str(HERE.parent / "bin"))
 
 import secret_scan as ss  # noqa: E402
 
-TOKEN = "github_pat_11FAKE0000FAKE0000FAKE0000"
+TOKEN = "github_pat_" + "11" + "FAKE" * 20  # 93 chars: a real-shaped, fake PAT
 
 PASS = 0
 FAIL = 0
@@ -197,8 +197,23 @@ def test_scan_fallback():
         check("scan: Python fallback honors WALK_SKIP", ["visible.txt"], found)
 
 
+def test_pattern_lengths():
+    """A real-length fine-grained PAT is flagged; a short lookalike is not.
+
+    GitHub issues 93-character fine-grained PATs (an 11-character prefix plus
+    82). Matching that length is what keeps documentation examples and test
+    fixtures - which used to fire a daily false alarm in an agent transcript -
+    out of the results.
+    """
+    full = "github_pat_" + "11" + "FAKE" * 20
+    short = "github_pat_11FAKE0000FAKE0000FAKE0000"
+    check("fixture: the real-shaped token is 93 chars", 93, len(full))
+    check("scanner: flags a real-length token", ["GitHub PAT"], ss.labels_in(full))
+    check("scanner: ignores a short lookalike", [], ss.labels_in(short))
+
+
 TESTS = (test_windows_home, test_windows_targets, test_default_targets,
-         test_walk, test_scan_fallback)
+         test_walk, test_scan_fallback, test_pattern_lengths)
 
 
 def main():

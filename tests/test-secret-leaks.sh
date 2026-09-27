@@ -27,8 +27,10 @@ leaks="$tmp/leaks"
 clean="$tmp/clean"
 mkdir -p "$leaks/.secrets" "$clean"
 
-# Matches github_pat_[A-Za-z0-9_]{20,} but is not a real credential.
-token='github_pat_11FAKE0000FAKE0000FAKE0000'
+# 93 characters - the real shape of a GitHub fine-grained PAT (11-char prefix
+# plus 82) - and obviously not a real credential. Built rather than typed so
+# the length cannot drift away from what the scanner matches.
+token="github_pat_11$(printf 'FAKE%.0s' $(seq 20))"
 
 # One file of each kind the scanner has to handle, plus one under an exempt
 # credential-store directory and one genuinely clean file.
