@@ -124,6 +124,8 @@ git clone https://github.com/lowqualityloey/dotfiles.git "$HOME\dotfiles"
 reload
 ```
 
+> **Run this in PowerShell 7 (`pwsh`), not Windows PowerShell 5.1.** The installer writes both profiles, but it derives the target from the *running* host's `$PROFILE` — under `powershell.exe` that resolves to the 5.1 profile, so the PowerShell 7 profile would never be updated (and the two would be overwritten by each other). Launch `pwsh`, or Windows Terminal's PowerShell 7 profile, before running it.
+
 > **Note on Windows Terminal**: [`windows/terminal-settings.json`](windows/terminal-settings.json) is provided as a complete reference. If you already have existing profiles, you can copy the `Gruvbox Dark` scheme and `defaults` font block into your own settings without overwriting your custom profile GUIDs. The bundled settings pin no distro-specific profile or starting directory, so the `WSL` profile adapts to whichever distro you have installed.
 
 ---
