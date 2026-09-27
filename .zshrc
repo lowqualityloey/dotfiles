@@ -73,7 +73,7 @@ ZSH_THEME=""
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git zoxide sudo extract docker fzf history colored-man-pages zsh-autocomplete zsh-autosuggestions zsh-syntax-highlighting)
+plugins=(git zoxide sudo extract docker fzf fzf-tab history colored-man-pages zsh-autosuggestions zsh-syntax-highlighting)
 
 # Performance: Skip compaudit security verification on every shell launch (saves ~280ms)
 ZSH_DISABLE_COMPFIX="true"
@@ -265,6 +265,13 @@ export FZF_DEFAULT_OPTS="
 
 export FZF_CTRL_T_OPTS="--preview 'bat --style=numbers --color=always --line-range :300 {} 2>/dev/null || eza --tree --level=2 --color=always {}'"
 
+# fzf-tab: fuzzy completion menu in Gruvbox theme (replaces zsh-autocomplete,
+# which conflicts with zsh-autosuggestions). Trigger: hit TAB as usual.
+zstyle ':fzf-tab:*' fzf-flags --color=bg+:#3c3836,bg:#282828,spinner:#b8bb26,hl:#fabd2f --color=fg:#ebdbb2,header:#928374,info:#fabd2f,pointer:#d3869b --color=marker:#b8bb26,fg+:#fbf1c7,prompt:#83a598,hl+:#fabd2f --height 45% --layout=reverse --border
+zstyle ':fzf-tab:*' preview-window 'right:50%:wrap'
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --level=2 --color=always $realpath 2>/dev/null'
+zstyle ':fzf-tab:complete:*:*' fzf-preview 'bat --style=numbers --color=always --line-range :100 ${(Q)realpath} 2>/dev/null || eza --color=always ${(Q)realpath} 2>/dev/null'
+
 # Starship Prompt Initialization
 if command -v starship >/dev/null 2>&1; then
     eval "$(starship init zsh)"
@@ -278,6 +285,8 @@ fi
 
 # Homebrew (Linuxbrew) - guarded: skip cleanly on machines without it
 [ -x /home/linuxbrew/.linuxbrew/bin/brew ] && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv zsh)"
+# NOTE: brew shellenv already puts linuxbrew/bin on PATH, which provides
+# yq (mikefarah v4). Do NOT apt-install yq — Ubuntu's is the old python wrapper (v3).
 
 # bun completions
 [ -s "$HOME/.bun/_bun" ] && source "$HOME/.bun/_bun"
