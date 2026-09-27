@@ -167,6 +167,18 @@ if command -v lazygit >/dev/null 2>&1; then
     alias lg="lazygit"
 fi
 
+# Git shortcuts. oh-my-zsh's git plugin defines these too, but restating them
+# here keeps them working even if that plugin is dropped. They must be aliases,
+# not functions: zsh refuses to define a function over an existing alias. This
+# block sits after the plugins are sourced, so it wins over the plugin's copy.
+if command -v git >/dev/null 2>&1; then
+    alias gst="git status"
+    alias gp="git push"
+    alias gl="git pull"
+    alias gco="git checkout"
+    alias gcb="git checkout -b"
+fi
+
 alias dotfiles="git -C ~/dotfiles"
 alias reload="source ~/.zshrc && echo 'Config reloaded!'"
 
