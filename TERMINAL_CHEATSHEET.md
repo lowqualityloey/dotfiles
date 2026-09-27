@@ -12,6 +12,10 @@ A complete reference for your customized **Zsh + Oh My Zsh + Starship (Gruvbox R
 | **`ll`** | Detailed list + permissions + Git status | `ll` |
 | **`tree`** | Visual directory tree with file icons | `tree` or `tree -L 2` |
 | **`cat <file>`** | Syntax-highlighted viewer with line numbers (via `bat`) | `cat package.json` |
+| **`procs`** | Process viewer with tree view and built-in filtering | `procs nginx` |
+| **`sd <find> <replace> <file>`** | Intuitive find-and-replace across files | `sd 'localhost' '10.0.0.5' nginx.conf` |
+| **`ouch`** | Compress/extract any archive format (zip, tar, 7z, zstd) | `ouch archive src/` |
+| **`tldr <cmd>`** | Offline example pages for a command (via `tealdeer`) | `tldr tar` |
 | **`z <folder>`** | Smart-jump to any frequent directory (via `zoxide`) | `z shelf` |
 | **`zi`** | Interactive fuzzy directory selector | `zi` |
 | **`lg`** | Launch full Git Terminal UI (via `lazygit`) | `lg` |
@@ -129,6 +133,8 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 | **`gst`**, **`gp`**, **`gl`** | Git status, push, pull |
 | **`gco`**, **`gcb`** | Git checkout, checkout branch |
 | **`lg`** | Launch LazyGit |
+| **`procs`** | Process viewer with tree view and built-in filtering (via `procs`) |
+| **`tldr <cmd>`** | Offline example pages for a command (via `tealdeer`) |
 | **`cdwsl`** | Jump straight to your Ubuntu WSL2 home folder (dynamically detected) |
 | **`cddoc`** | Jump straight to your Documents folder (supports OneDrive or local Documents) |
 | **`..`**, **`...`**, **`....`** | Quick directory navigation |
@@ -138,7 +144,7 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 | **`open <path>`** | Open directory in File Explorer |
 | **`sysclean`** | Flush DNS & clean Windows Temp files |
 | **`sysupdate`** | Upgrade all Windows apps via WinGet and Chocolatey |
-| **`config`** | Edit PowerShell profile in VS Code |
+| **`config`** | Edit PowerShell profile in VS Code (Notepad if `code` is absent) |
 | **`reload`** | Reload `$PROFILE` without restarting terminal |
 
 ---
@@ -146,7 +152,7 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 ## 🎨 Theme & Configuration Files
 
 * **Prompt (WSL2 & Windows)**: Starship with Gruvbox Rainbow (`~/.config/starship.toml`)
-* **Terminal Background**: Gruvbox Dark `#282828` across Windows Terminal, IDE, and WSL
+* **Terminal Background**: Gruvbox Dark `#282828` — shipped for Windows Terminal in `windows/terminal-settings.json`; IDE themes are set inside the IDE itself, not from this repo
 * **Font**: `JetBrainsMono Nerd Font`
 * **Main Shell Config (Linux)**: `~/.zshrc`
 * **PowerShell 7 Config (Windows)**: `$PROFILE` (e.g. `$HOME\Documents\PowerShell\Microsoft.PowerShell_profile.ps1`)
@@ -156,3 +162,4 @@ If you drop into PowerShell 7 (`pwsh`), your environment matches your Zsh workfl
 * **Git TUI**: `lazygit` draws its diff panel through `delta` too, so it matches the command line (config `lazygit/config.yml`)
 * **Dotfiles Git Repo**: `~/dotfiles` (Synced to `lowqualityloey/dotfiles`)
 * **Safety Backups**: `install.sh` moves any file it replaces into a timestamped `~/.dotfiles_backup_YYYYMMDDHHMMSS/` directory before linking
+* **Windows Profile Backups**: `windows/install.ps1` writes a `.backup.YYYYMMDDHHMMSS` copy beside each PowerShell profile — but only when the installed copy actually differs from the repo, so re-running the installer never piles up identical backups

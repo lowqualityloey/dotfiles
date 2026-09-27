@@ -46,6 +46,11 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `zoxide`: Smart directory jumping (`z <folder>`, `zi`).
   * `eza`: Colorized directory listings with Git status and file icons (`ls`, `ll`, `tree`).
   * `bat`: Syntax-highlighted text and code viewer (`cat`).
+  * `procs`: Process viewer with tree view and built-in filtering (`procs nginx`).
+  * `sd`: Intuitive find-and-replace across files (`sd 'before' 'after' file`).
+  * `ouch`: One command for every archive format (zip, tar, 7z, zstd, …).
+  * `tldr` (tealdeer): Offline, searchable example pages for CLI tools (`tldr tar`).
+  * The last four are deliberately **not** aliased over `ps`, `sed` or `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd` and `ouch` are Linux-only.
   * `lazygit`: Full-screen Git terminal UI (`lg`), with its diff panel rendered through `delta` so it matches `git diff`.
   * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that (config `git/delta.gitconfig`, wrapper `bin/delta-pager`). Note that side-by-side truncates individual very long lines at *any* width — delta marks them with `↴` — so a wide window helps but does not eliminate it.
 * **🔁 Portable by Design**:
@@ -151,6 +156,10 @@ reload
 | **`grid`** / **`grid reset`** | WSL2 | Launches, resumes, or resets a 2×2 quad-terminal layout in 1 window |
 | **`z <folder>`** | WSL2 & Win | Smart-jump to frequent folders (`z shelf`, `z doc`) |
 | **`zi`** | WSL2 & Win | Interactive fuzzy directory selection menu |
+| **`procs`** | WSL2 & Win | Process viewer with tree view and built-in filtering (`procs nginx`) |
+| **`sd`** | WSL2 | Intuitive find-and-replace across files (`sd 'old' 'new' file`) |
+| **`ouch`** | WSL2 | Compress or extract any archive format in one command |
+| **`tldr <cmd>`** | WSL2 & Win | Offline example pages for a command (tealdeer) |
 | <kbd>Ctrl</kbd> + <kbd>T</kbd> | WSL2 & Win | Fuzzy-search files in current folder with live syntax preview |
 | <kbd>Ctrl</kbd> + <kbd>R</kbd> | WSL2 & Win | Fuzzy-search command history |
 | <kbd>Ctrl</kbd> + <kbd>Space</kbd> | WSL2 & Win | Instantly accept inline predictive autocompletion |
@@ -210,7 +219,7 @@ Moving a secret out of a tracked file is not the end of the story. Agent tools (
 ```toml
 # ~/.config/atuin/config.toml
 history_filter = [
-  "github_pat_[A-Za-z0-9_]{20,}",  # GitHub PAT
+  "github_pat_[A-Za-z0-9_]{82}",  # GitHub PAT (93 chars total)
   "sk-proj-[A-Za-z0-9_-]{30,}",  # OpenAI key
   "sk-or-v1-[A-Za-z0-9]{40,}",  # OpenRouter key
   "vck_[A-Za-z0-9]{40,}",  # Vercel key
@@ -219,7 +228,7 @@ history_filter = [
 
 * **`check-secret-leaks`** walks those stores, prints one line per affected file, and exits non-zero when it finds key-shaped strings.
 * **`scrub-secrets`** redacts them — dry-run by default, `--apply` to write. It rewrites SQLite databases in place with `secure_delete` + WAL checkpoint + `VACUUM`, so the old bytes do not survive in free pages.
-* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; measured on a WSL2 machine that finished in 5–12s, versus about 79s for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped). Both figures scale with how much those caches have grown.
+* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; on WSL2 that measured 1.5s with the agent caches idle and 12s while a 131 MB transcript was being rewritten, versus about 79s for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped). Both figures scale with how much those caches have grown and how actively they are being written.
 * **Daily timer**: `install.sh` installs `secret-leak-check.timer`, which runs the check once a day and records the result in the user journal.
 
 ```bash
