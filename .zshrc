@@ -144,6 +144,23 @@ alias agy-usage="agy -i '/usage'"
 # WSL2 Quality-of-Life Integrations
 alias pbcopy="clip.exe"
 alias open="explorer.exe ."
+# npm/pip/node CLIs that open a web login (npm login, gh auth login, ...) refuse to
+# run under WSL unless BROWSER points at a real launcher, so hand them Windows' browser.
+# NOTE: do NOT point BROWSER directly at a .exe with spaces (e.g. "Program Files");
+# sensible-browser does `sh -c "$candidate \"$@\""` which splits on spaces and fails
+# with `/mnt/c/Program: not found`. wslview handles Windows browser launch correctly.
+if command -v wslview >/dev/null 2>&1; then
+    export BROWSER="wslview"
+elif [[ -z ${BROWSER:-} ]]; then
+    for _browser in "/mnt/c/Program Files/Google/Chrome/Application/chrome.exe" \
+                     "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"; do
+        if [[ -x $_browser ]]; then
+            export BROWSER="$_browser"
+            break
+        fi
+    done
+    unset _browser
+fi
 # Read the Windows clipboard back into WSL2 (strip the CR that PowerShell leaves behind)
 pbpaste() {
     powershell.exe -NoProfile -NoLogo -Command Get-Clipboard 2>/dev/null | tr -d '\r'

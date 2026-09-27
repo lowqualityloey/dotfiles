@@ -215,4 +215,71 @@ PY
     esac
 fi
 
+# 9. npmrc: drop config keys the installed npm no longer recognises. npm repeats
+#    "npm warn Unknown user config ..." on *every* command for each stale key, so
+#    a machine set up by an older install stays noisy until they go. Which keys
+#    are stale depends on the npm version, so npm is asked directly rather than
+#    from a hardcoded list that would go out of date again. Only the offending
+#    lines are removed - every other line is preserved exactly - and the file is
+#    backed up before the first change. Idempotent.
+echo "--> Cleaning npm config of unknown keys..."
+NPMRC="$HOME/.npmrc"
+if ! command -v npm >/dev/null 2>&1; then
+    echo "  [SKIP] npm not installed; nothing to clean."
+elif [ ! -f "$NPMRC" ]; then
+    echo "  [SKIP] No ~/.npmrc yet; nothing to clean."
+else
+    # Key names only, from real assignments. Comments, blank lines and `[section]`
+    # headers have no `=` before any real key and are skipped by the pattern.
+    # Run npm from $HOME so a project-level .npmrc cannot skew the answer.
+    unknown=$(
+        sed -n 's/^[[:space:]]*\([A-Za-z0-9_-][A-Za-z0-9_.-]*\)[[:space:]]*=.*/\1/p' "$NPMRC" |
+            sort -u |
+            while IFS= read -r key; do
+                [ -n "$key" ] || continue
+                # stderr carries the warning; stdout ("undefined") is discarded.
+                if (cd "$HOME" && npm config get "$key" 2>&1 >/dev/null) |
+                    grep -q 'Unknown.*config'; then
+                    printf '%s\n' "$key"
+                fi
+            done
+    ) || true
+
+    if [ -z "$unknown" ]; then
+        echo "  [OK] No unknown keys in $NPMRC."
+    else
+        keys=$(mktemp)
+        cleaned=$(mktemp)
+        count=$(mktemp)
+        printf '%s\n' "$unknown" >"$keys"
+        # Drop only the lines that assign a rejected key; everything else is
+        # reprinted verbatim. `n` is counted by hand rather than with
+        # length(array), which mawk and busybox awk do not support.
+        awk -v list="$keys" -v countfile="$count" '
+            BEGIN { while ((getline key < list) > 0) unknown[key] = 1 }
+            {
+                line = $0
+                sub(/^[ \t]+/, "", line)
+                if (match(line, /^[A-Za-z0-9_-][A-Za-z0-9_.-]*/)) {
+                    key = substr(line, RSTART, RLENGTH)
+                    if (key in unknown) { n++; next }
+                }
+                print
+            }
+            END { printf "%d\n", n + 0 > countfile }
+        ' "$NPMRC" >"$cleaned"
+
+        if [ "$(cat "$count")" -gt 0 ]; then
+            mkdir -p "$BACKUP_DIR"
+            cp -p "$NPMRC" "$BACKUP_DIR/npmrc"
+            cat "$cleaned" >"$NPMRC"
+            echo "  [OK] Removed $(cat "$count") unknown key(s) from $NPMRC: $(printf '%s' "$unknown" | tr '\n' ' ')"
+            echo "  [BACKUP] Previous $NPMRC kept at $BACKUP_DIR/npmrc"
+        else
+            echo "  [WARN] Found unknown keys but could not rewrite $NPMRC; remove them by hand."
+        fi
+        rm -f "$keys" "$cleaned" "$count"
+    fi
+fi
+
 echo "==> Dotfiles setup complete! Run 'source ~/.zshrc' to apply."
