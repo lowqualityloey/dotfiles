@@ -239,6 +239,12 @@ No test framework needed — the pager wrapper's only job is choosing a flag, so
 sh tests/test-delta-pager.sh
 ```
 
+The shell scripts are kept `shellcheck`-clean:
+
+```bash
+shellcheck install.sh bin/delta-pager bin/cheatsheet tests/test-delta-pager.sh
+```
+
 ---
 
 ## 📄 License

@@ -9,7 +9,7 @@
 
 set -eu
 
-here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 pager="$here/../bin/delta-pager"
 
 tmp=$(mktemp -d)

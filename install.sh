@@ -111,6 +111,9 @@ DELTA_CFG="$DOTFILES_DIR/git/delta.gitconfig"
 # Same literal value on both platforms: git runs the pager through `sh`, so
 # $HOME expands to the local home on Linux and to Git for Windows' bash home
 # on Windows. Relies on the documented $HOME/dotfiles clone location.
+# single quotes are deliberate - git must receive the literal $HOME and expand
+# it when it runs the pager, not now.
+# shellcheck disable=SC2016
 DELTA_PAGER='sh $HOME/dotfiles/bin/delta-pager'
 if command -v git >/dev/null 2>&1; then
     if command -v delta >/dev/null 2>&1; then
