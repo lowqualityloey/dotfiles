@@ -50,7 +50,13 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `sd`: Intuitive find-and-replace across files (`sd 'before' 'after' file`).
   * `ouch`: One command for every archive format (zip, tar, 7z, zstd, …).
   * `tldr` (tealdeer): Offline, searchable example pages for CLI tools (`tldr tar`).
-  * The last four are deliberately **not** aliased over `ps`, `sed` or `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd` and `ouch` are Linux-only.
+  * `tokei`: Instant code statistics — lines/files/languages (`tokei .`). Token-cheap repo sizing for agents: one command instead of reading files.
+  * `difft` (difftastic): Syntax-aware diffs that show *what changed* not just which lines (`difft fileA fileB`). Far fewer wasted tokens on refactors vs `git diff`.
+  * `just`: Command runner for per-repo recipes (`just --list`, `just test`). Agents discover workflows without reading CI files.
+  * `dust`: Visual disk usage (`dust -d 1 ~/project`). Find bloat (node_modules, target/) before it eats agent context.
+  * `duf`: Readable disk-free overview (`duf -only local`).
+  * `hyperfine`: Quick benchmarks (`hyperfine 'cmd1' 'cmd2'`). Verify a "faster" approach before committing to it.
+  * The last four are deliberately **not** aliased over `ps`, `sed` or `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd`, `ouch`, `tokei`, `difft`, `just`, `dust`, `duf` and `hyperfine` are Linux-only.
   * `lazygit`: Full-screen Git terminal UI (`lg`), with its diff panel rendered through `delta` so it matches `git diff`.
   * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that (config `git/delta.gitconfig`, wrapper `bin/delta-pager`). Note that side-by-side truncates individual very long lines at *any* width — delta marks them with `↴` — so a wide window helps but does not eliminate it.
 * **🔁 Portable by Design**:

@@ -16,6 +16,12 @@ A complete reference for your customized **Zsh + Oh My Zsh + Starship (Gruvbox R
 | **`sd <find> <replace> <file>`** | Intuitive find-and-replace across files | `sd 'localhost' '10.0.0.5' nginx.conf` |
 | **`ouch`** | Compress/extract any archive format (zip, tar, 7z, zstd) | `ouch archive src/` |
 | **`tldr <cmd>`** | Offline example pages for a command (via `tealdeer`) | `tldr tar` |
+| **`tokei`** | Code stats: lines/files/languages in one shot | `tokei .` |
+| **`difft <a> <b>`** | Syntax-aware diff, shows what changed (via `difftastic`) | `difft old.ts new.ts` |
+| **`just`** | Per-repo command runner | `just --list` |
+| **`dust`** | Visual disk usage, find the bloat | `dust -d 1 .` |
+| **`duf`** | Readable disk-free table | `duf -only local` |
+| **`hyperfine`** | Benchmark commands | `hyperfine 'a' 'b'` |
 | **`z <folder>`** | Smart-jump to any frequent directory (via `zoxide`) | `z shelf` |
 | **`zi`** | Interactive fuzzy directory selector | `zi` |
 | **`lg`** | Launch full Git Terminal UI (via `lazygit`) | `lg` |

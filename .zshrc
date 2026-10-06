@@ -311,6 +311,9 @@ esac
 # Turso
 export PATH="$PATH:$HOME/.turso"
 
+# Rust toolchain (rustup) - provides cargo, rustc
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
 
 
 # Added by Antigravity CLI installer
@@ -324,3 +327,26 @@ command -v but >/dev/null 2>&1 && eval "$(but completions zsh)"
 [ -f "$HOME/.atuin/bin/env" ] && . "$HOME/.atuin/bin/env"
 
 command -v atuin >/dev/null 2>&1 && eval "$(atuin init zsh)"
+
+# WSL: route `zed` to the Windows Zed build so `zed .` opens the current folder.
+# (The native Linux `zed` can't show a GUI from WSL without a display server.)
+zed() {
+  local args=()
+  if [ $# -eq 0 ]; then
+    args=("$(wslpath -w .)")
+  else
+    for a in "$@"; do
+      if [ -e "$a" ]; then args+=("$(wslpath -w "$a")")
+      else args+=("$a"); fi
+    done
+  fi
+  zed.exe "${args[@]}"
+}
+
+# Added by flyctl installer
+export FLYCTL_INSTALL="/home/heyloey/.fly"
+export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
+# gh reads $XDG_CONFIG_HOME/gh/hosts.yml, and XDG_CONFIG_HOME points at
+# .config-xdg-v1 where no gh dir exists; the real token lives in ~/.config/gh.
+export GH_CONFIG_DIR="$HOME/.config/gh"
