@@ -152,4 +152,31 @@ if (Get-Command lazygit -ErrorAction SilentlyContinue) {
     Write-Host "  [SKIP] lazygit not installed on Windows; skipping its diff renderer." -ForegroundColor Yellow
 }
 
+# 7. Commit-message hook + global agent instructions - parity with the WSL side
+Write-Host "==> Installing Git commit-msg hook..." -ForegroundColor Cyan
+Install-Profile -Source (Join-Path $DotfilesDir "AGENTS.md") `
+    -Destination (Join-Path $HOME ".AGENTS.md") -Label "global AGENTS.md"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $GitTemplate = Join-Path $HOME ".git-template"
+    $HookDir = Join-Path $GitTemplate "hooks"
+    if (-not (Test-Path $HookDir)) {
+        New-Item -ItemType Directory -Path $HookDir -Force | Out-Null
+    }
+    # Force LF: a CRLF shebang makes git's hook execution unreliable on Windows.
+    $HookBody = (Get-Content -Raw (Join-Path $DotfilesDir "git\hooks\commit-msg")) -replace "`r`n", "`n"
+    [System.IO.File]::WriteAllText((Join-Path $HookDir "commit-msg"), $HookBody)
+    Write-Host "  [OK] commit-msg hook installed in $HookDir." -ForegroundColor Green
+
+    $GitTemplatePosix = $GitTemplate -replace '\\', '/'
+    $CurrentTemplate = git config --global --get init.templateDir 2>$null
+    if ($CurrentTemplate -ne $GitTemplatePosix) {
+        git config --global init.templateDir "$GitTemplatePosix"
+        Write-Host "  [OK] init.templateDir set to $GitTemplatePosix." -ForegroundColor Green
+    } else {
+        Write-Host "  [OK] init.templateDir already set." -ForegroundColor Green
+    }
+} else {
+    Write-Host "  [SKIP] git not installed." -ForegroundColor Yellow
+}
+
 Write-Host "==> Windows setup complete! Run 'reload' or restart PowerShell 7." -ForegroundColor Green

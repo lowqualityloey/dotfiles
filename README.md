@@ -59,6 +59,10 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * The last four are deliberately **not** aliased over `ps`, `sed` or `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd`, `ouch`, `tokei`, `difft`, `just`, `dust`, `duf` and `hyperfine` are Linux-only.
   * `lazygit`: Full-screen Git terminal UI (`lg`), with its diff panel rendered through `delta` so it matches `git diff`.
   * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that (config `git/delta.gitconfig`, wrapper `bin/delta-pager`). Note that side-by-side truncates individual very long lines at *any* width — delta marks them with `↴` — so a wide window helps but does not eliminate it.
+* **🤖 No AI Attribution in Commits**:
+  * `git/hooks/commit-msg` removes `Generated with Codebuff`/`Freebuff` lines and the matching `Co-Authored-By:` trailer after the message is written; human co-authors and other trailers such as `HeyLoey-Milestone:` are kept.
+  * Installed through git's `init.templateDir` for new clones and `bin/install-commit-msg-hook` for existing checkouts, so `core.hooksPath` is never touched and each repo keeps its own hooks (husky, git-lfs, post-commit).
+  * `AGENTS.md` is linked to `~/.AGENTS.md` so agents are told not to add the footer in the first place.
 * **🔁 Portable by Design**:
   * No hardcoded usernames, WSL distro names, or user-specific home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime. (The one absolute path left is Linuxbrew's fixed `/home/linuxbrew/.linuxbrew`, which is identical on every machine that installs it.)
   * Optional tools that may be absent (`brew`, `atuin`, GitButler, `oh-my-posh`) are skipped cleanly instead of erroring on a fresh machine.
@@ -78,8 +82,11 @@ dotfiles/
 ├── requirements-dev.txt             # Pinned pytest for the test suite (dev only)
 ├── README.md                        # This file
 ├── TERMINAL_CHEATSHEET.md           # Full CLI and shortcut cheatsheet
+├── AGENTS.md                        # Global agent instructions: no AI attribution
 ├── git/
-│   └── delta.gitconfig              # delta pager settings, included from ~/.gitconfig
+│   ├── delta.gitconfig              # delta pager settings, included from ~/.gitconfig
+│   └── hooks/
+│       └── commit-msg               # Strips AI attribution trailers from commit messages
 ├── lazygit/
 │   └── config.yml                   # lazygit renders its diff panel through delta
 ├── .github/
@@ -87,6 +94,7 @@ dotfiles/
 │       └── tests.yml                # Test suite + lint on main, wip/**, and pull requests
 ├── tests/
 │   ├── run.sh                       # Runs the tests and lints the shell scripts
+│   ├── test-commit-msg-hook.sh      # Regression tests for the attribution stripper
 │   ├── test-delta-pager.sh          # Regression tests for the pager width threshold
 │   ├── test-install-atuin.sh        # Regression tests for the installer's atuin step
 │   ├── test-secret-leaks.sh         # Regression tests for the credential-leak scanner
@@ -99,6 +107,7 @@ dotfiles/
 │   ├── cheatsheet                   # Interactive ANSI terminal reference tool
 │   ├── check-secret-leaks           # Flags credential-shaped strings in local logs/caches
 │   ├── delta-pager                  # Width-aware Git pager wrapper for delta
+│   ├── install-commit-msg-hook      # Adds the hook to repositories that already exist
 │   ├── scrub-secrets                # Redacts those strings (dry-run by default)
 │   └── secret_scan.py               # Shared detection patterns for the two tools
 ├── zsh/
@@ -281,6 +290,10 @@ sh tests/run.sh --quiet    # only failures and the summary
 A full run prints a `== <name> ==` banner per check, that check's own output, an `ok:`/`FAILED:` line, and a final tally:
 
 ```text
+== test-commit-msg-hook.sh ==
+...
+ok: test-commit-msg-hook.sh
+
 == test-delta-pager.sh ==
 ...
 ok: test-delta-pager.sh
@@ -306,7 +319,7 @@ ok: test_secret_scan.py [pytest]
 == shellcheck ==
 ok: shellcheck
 
-6 check(s) run, 0 failed
+7 check(s) run, 0 failed
 ```
 
 Flags and overrides:

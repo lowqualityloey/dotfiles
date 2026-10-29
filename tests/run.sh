@@ -83,7 +83,7 @@ run_shellcheck() {
         printf 'shellcheck not installed; skipping lint\n'
         return 0
     fi
-    set -- "$repo/install.sh"
+    set -- "$repo/install.sh" "$repo/git/hooks/commit-msg"
     for candidate in "$repo"/bin/* "$repo"/tests/*.sh; do
         [ -f "$candidate" ] || continue
         head -n 1 "$candidate" | grep -Eq '^#!.*(/| )(bash|sh)([[:space:]]|$)' || continue

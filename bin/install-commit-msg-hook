@@ -1,0 +1,109 @@
+#!/bin/sh
+# Install git/hooks/commit-msg (the AI attribution stripper) into repositories
+# that already exist.
+#
+# New repositories get the hook automatically: install.sh points git's
+# init.templateDir at ~/.git-template. This script is for everything cloned
+# before that, without touching core.hooksPath (which would shadow the repo's
+# own hooks).
+#
+# Usage:
+#     install-commit-msg-hook [--force] [repo ...]
+#
+# With no repo, the current directory's repository is used. An existing
+# commit-msg hook that this project does not own is left alone and reported,
+# unless --force is given, which backs it up first.
+#
+# Linked worktrees resolve to the shared .git/hooks directory, so installing
+# from a worktree covers the main checkout and vice versa.
+
+set -eu
+
+usage() {
+    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+force=0
+repos=''
+
+for arg in "$@"; do
+    case $arg in
+        --force) force=1 ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        -*)
+            printf 'install-commit-msg-hook: unknown option: %s\n' "$arg" >&2
+            usage >&2
+            exit 2
+            ;;
+        *) repos="$repos $arg" ;;
+    esac
+done
+
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH='' cd -- "$here/.." && pwd)
+source_hook="$repo_root/git/hooks/commit-msg"
+
+if [ ! -f "$source_hook" ]; then
+    printf 'install-commit-msg-hook: missing %s\n' "$source_hook" >&2
+    exit 1
+fi
+
+# A hook containing this line is ours to replace.
+marker='Strip AI attribution from commit messages.'
+installed=0
+skipped=0
+
+install_into() { # install_into <repo>
+    repo=$1
+
+    if ! git -C "$repo" rev-parse --git-dir >/dev/null 2>&1; then
+        printf '  [SKIP] %s is not a git repository\n' "$repo"
+        skipped=$((skipped + 1))
+        return 0
+    fi
+
+    # --path-format=absolute keeps linked worktrees pointing at the shared
+    # hooks directory; older git falls back to resolving it by hand.
+    if hooks=$(git -C "$repo" rev-parse --path-format=absolute --git-path hooks 2>/dev/null); then
+        :
+    else
+        hooks=$(git -C "$repo" rev-parse --git-path hooks)
+        case $hooks in
+            /* | [A-Za-z]:[/\\]*) ;;
+            *) hooks="$repo/$hooks" ;;
+        esac
+    fi
+
+    target="$hooks/commit-msg"
+
+    if [ -e "$target" ] && ! grep -qF "$marker" "$target" 2>/dev/null; then
+        if [ "$force" -eq 0 ]; then
+            printf '  [SKIP] %s already has a commit-msg hook (use --force to back it up and replace)\n' "$repo"
+            skipped=$((skipped + 1))
+            return 0
+        fi
+        backup="$target.backup.$(date +%Y%m%d%H%M%S)"
+        mv "$target" "$backup"
+        printf '  [BACKUP] %s -> %s\n' "$target" "$backup"
+    fi
+
+    mkdir -p "$hooks"
+    cp "$source_hook" "$target"
+    chmod +x "$target"
+    installed=$((installed + 1))
+    printf '  [OK] %s\n' "$target"
+}
+
+if [ -z "$repos" ]; then
+    repos=' .'
+fi
+
+printf 'Installing the AI-attribution commit-msg hook...\n'
+for repo in $repos; do
+    install_into "$repo"
+done
+
+printf '%s installed, %s skipped\n' "$installed" "$skipped"

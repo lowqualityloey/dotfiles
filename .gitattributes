@@ -1,0 +1,5 @@
+# Executed by git or by the test suite, so keep LF even where core.autocrlf is
+# on (Windows): a CRLF shebang makes git's hook execution unreliable.
+git/hooks/* text eol=lf
+bin/install-commit-msg-hook text eol=lf
+tests/test-commit-msg-hook.sh text eol=lf

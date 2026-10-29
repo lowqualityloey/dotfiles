@@ -35,6 +35,7 @@ link_file "$DOTFILES_DIR/starship.toml" "$HOME/.config/starship.toml"
 link_file "$DOTFILES_DIR/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
 link_file "$DOTFILES_DIR/.tmux.conf" "$HOME/.tmux.conf"
 link_file "$DOTFILES_DIR/TERMINAL_CHEATSHEET.md" "$HOME/TERMINAL_CHEATSHEET.md"
+link_file "$DOTFILES_DIR/AGENTS.md" "$HOME/.AGENTS.md"
 link_file "$DOTFILES_DIR/bin/cheatsheet" "$HOME/.local/bin/cheatsheet"
 link_file "$DOTFILES_DIR/bin/scrub-secrets" "$HOME/.local/bin/scrub-secrets"
 link_file "$DOTFILES_DIR/bin/check-secret-leaks" "$HOME/.local/bin/check-secret-leaks"
@@ -136,7 +137,31 @@ if command -v git >/dev/null 2>&1; then
     fi
 fi
 
-# 8. atuin history_filter: redact the same key shapes from atuin's own database.
+# 8. Commit-message hook: strip AI attribution footers after the message is
+#    written (git/hooks/commit-msg). Installed through git's template directory
+#    so every new clone and `git init` gets it; bin/install-commit-msg-hook
+#    covers repositories that already exist. core.hooksPath is deliberately not
+#    used -- it would shadow each repo's own hooks (husky, git-lfs, the
+#    post-commit milestone dispatcher).
+echo "--> Installing Git commit-msg hook..."
+if command -v git >/dev/null 2>&1; then
+    GIT_TEMPLATE="$HOME/.git-template"
+    HOOK_SRC="$DOTFILES_DIR/git/hooks/commit-msg"
+    if [ "$(git config --global --get init.templateDir 2>/dev/null)" = "$GIT_TEMPLATE" ]; then
+        echo "  [OK] init.templateDir already set."
+    else
+        git config --global init.templateDir "$GIT_TEMPLATE"
+        echo "  [OK] init.templateDir set to $GIT_TEMPLATE."
+    fi
+    mkdir -p "$GIT_TEMPLATE/hooks"
+    cp "$HOOK_SRC" "$GIT_TEMPLATE/hooks/commit-msg"
+    chmod 0755 "$GIT_TEMPLATE/hooks/commit-msg"
+    echo "  [OK] commit-msg hook installed in $GIT_TEMPLATE/hooks."
+else
+    echo "  [SKIP] git not installed."
+fi
+
+# 9. atuin history_filter: redact the same key shapes from atuin's own database.
 #    Atuin records commands through preexec/precmd, so the zshaddhistory hook in
 #    .zshrc never sees them. Only the history_filter key is touched - every other
 #    line of the user's config is preserved - and a backup is kept. Idempotent.
@@ -215,7 +240,7 @@ PY
     esac
 fi
 
-# 9. npmrc: drop config keys the installed npm no longer recognises. npm repeats
+# 10. npmrc: drop config keys the installed npm no longer recognises. npm repeats
 #    "npm warn Unknown user config ..." on *every* command for each stale key, so
 #    a machine set up by an older install stays noisy until they go. Which keys
 #    are stale depends on the npm version, so npm is asked directly rather than

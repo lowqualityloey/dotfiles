@@ -1,0 +1,52 @@
+#!/bin/sh
+# Strip AI attribution from commit messages.
+#
+# Managed by ~/dotfiles: install.sh copies this into ~/.git-template/hooks so
+# every new clone and `git init` picks it up, and bin/install-commit-msg-hook
+# installs it into repositories that already exist.
+#
+# Why a hook: commit-msg runs after the message has been written, so it catches
+# every tool, every `-m` order, and edits made in $EDITOR. It never blocks a
+# commit -- at worst the message is left exactly as it was.
+#
+# Removed (case-insensitive):
+#   🤖 Generated with Codebuff
+#   Generated with Freebuff 🤖
+#   Co-Authored-By: Codebuff <noreply@codebuff.com>
+# Kept: human Co-Authored-By trailers, and every other line.
+
+set -u
+
+msg=${1:-}
+[ -n "$msg" ] && [ -f "$msg" ] || exit 0
+
+tmp="$msg.dotfiles-$$"
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+# grep -v selects the lines we keep. A non-zero status only means everything
+# was attribution; the emptiness check below then leaves the message alone so
+# git can report the real problem (an empty message) instead of a silent edit.
+#
+# The first pattern is deliberately unanchored and ASCII-only. Under a UTF-8
+# locale (the one Git for Windows hands a hook) GNU grep stops matching as soon
+# as a character class has to consume the leading emoji, so anchoring with
+# ^[[:space:]]* or ^[^[:alnum:]]* silently misses the robot line. Matching the
+# phrase itself works in every locale; a body line containing it is attribution
+# too, so there is nothing to preserve.
+grep -v -i -E \
+    -e 'Generated with (Codebuff|Freebuff)' \
+    -e '^[[:space:]]*Co-Authored-By:.*(Codebuff|Freebuff)' \
+    "$msg" >"$tmp" || true
+
+if [ ! -s "$tmp" ] || cmp -s "$msg" "$tmp"; then
+    exit 0
+fi
+
+# Removing a line can leave a blank tail; collapse it to one trailing newline.
+# $(cat ...) drops all trailing newlines, and the quoted expansion keeps the
+# body byte-for-byte (no word splitting or globbing).
+stripped=$(cat "$tmp")
+printf '%s\n' "$stripped" >"$msg"
+
+printf '%s\n' "commit-msg: removed AI attribution footer" >&2
+exit 0
