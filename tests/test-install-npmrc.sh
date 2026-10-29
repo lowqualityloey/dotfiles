@@ -45,10 +45,13 @@ file_contains() { # file_contains <file> <needle>
 }
 
 # Byte-exact file comparison, via cmp: command substitution strips trailing
-# newlines and would quietly break comparison against a here-document.
+# newlines and would quietly break comparison against a here-document. CR is
+# ignored on both sides: on Windows the checkout is CRLF while the installer's
+# awk rewrite emits LF, and the assertion is about content, not line endings.
 same_file() { # same_file <expected-text> <actual-file>
-    printf '%s' "$1" >"$work/expected"
-    cmp -s "$work/expected" "$2"
+    printf '%s' "$1" | tr -d '\r' >"$work/expected"
+    tr -d '\r' <"$2" >"$work/actual"
+    cmp -s "$work/expected" "$work/actual"
 }
 
 if ! command -v bash >/dev/null 2>&1; then
@@ -75,7 +78,20 @@ make_sandbox() {
     mkdir -p "$root/home" "$root/bin"
     for tool in $SANDBOX_TOOLS; do
         real=$(command -v "$tool" 2>/dev/null) || continue
-        ln -sf "$real" "$root/bin/$tool"
+        # Git Bash resolves builtins such as printf to a bare name, which has no
+        # file to link (and makes ln fail); the sandboxed bash still has them.
+        case $real in
+            /*) [ -x "$real" ] || continue ;;
+            *) continue ;;
+        esac
+        # ln -s is not always a link: without symlink privileges Windows copies
+        # the binary instead, and a copied native git cannot find its DLL
+        # directory. Only keep the result when it really is a symlink.
+        ln -sf "$real" "$root/bin/$tool" 2>/dev/null || true
+        if [ ! -L "$root/bin/$tool" ]; then
+            printf '#!/bin/sh\nexec "%s" "$@"\n' "$real" >"$root/bin/$tool"
+            chmod +x "$root/bin/$tool"
+        fi
     done
     # Always fails `show-environment`, so the systemd step takes its skip branch
     # and no timer is enabled on the machine running the tests.

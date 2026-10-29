@@ -49,17 +49,22 @@ file_contains() { # file_contains <file> <needle>
 
 # Byte-exact file comparison. Done with cmp rather than `$(cat ...) == ...`
 # because command substitution strips trailing newlines, which quietly breaks
-# any comparison against a multi-line here-document.
+# any comparison against a multi-line here-document. CR is ignored on both
+# sides: on Windows the checkout is CRLF while the installer's awk/python
+# rewrite emits LF, and the assertion is about content, not line endings.
 same_file() { # same_file <expected-text> <actual-file>
-    printf '%s' "$1" > "$work/expected"
-    cmp -s "$work/expected" "$2"
+    printf '%s' "$1" | tr -d '\r' > "$work/expected"
+    tr -d '\r' < "$2" > "$work/actual"
+    cmp -s "$work/expected" "$work/actual"
 }
 
 # Everything install.sh shells out to. Symlinked so the sandbox PATH is short
 # and predictable, and so `command -v` sees exactly these plus the stubs.
+# python3 is here because step 8 shells out to it to rewrite the atuin config;
+# on Linux /usr/bin/python3 would be found anyway, but Git Bash has no such path.
 SANDBOX_TOOLS='bash sh date mkdir ln readlink chmod rm cp cat head grep sed
                awk mktemp git wc tr uname env dirname basename find touch seq
-               printf stty tty'
+               printf stty tty python3'
 
 if ! command -v bash >/dev/null 2>&1; then
     printf 'SKIP: bash not found\n'
@@ -80,7 +85,20 @@ make_sandbox() {
     mkdir -p "$root/home" "$root/bin"
     for tool in $SANDBOX_TOOLS; do
         real=$(command -v "$tool" 2>/dev/null) || continue
-        ln -sf "$real" "$root/bin/$tool"
+        # Git Bash resolves builtins such as printf to a bare name, which has no
+        # file to link (and makes ln fail); the sandboxed bash still has them.
+        case $real in
+            /*) [ -x "$real" ] || continue ;;
+            *) continue ;;
+        esac
+        # ln -s is not always a link: without symlink privileges Windows copies
+        # the binary instead, and a copied native git cannot find its DLL
+        # directory. Only keep the result when it really is a symlink.
+        ln -sf "$real" "$root/bin/$tool" 2>/dev/null || true
+        if [ ! -L "$root/bin/$tool" ]; then
+            printf '#!/bin/sh\nexec "%s" "$@"\n' "$real" >"$root/bin/$tool"
+            chmod +x "$root/bin/$tool"
+        fi
     done
     if [ "$2" = atuin ]; then
         printf '#!/bin/sh\nexit 0\n' > "$root/bin/atuin"
@@ -96,8 +114,11 @@ make_sandbox() {
 # Runs the installer in a sandbox. run_install <sandbox> -> installer stdout
 run_install() {
     root=$1
+    # Windows Python resolves ~ through USERPROFILE, not HOME; without it
+    # secret_scan.py's Path.home() raises and the atuin step silently fails.
     env -i \
         HOME="$root/home" \
+        USERPROFILE="$root/home" \
         PATH="$root/bin:/usr/bin:/bin" \
         ZSH="$root/home/.oh-my-zsh" \
         ZSH_CUSTOM="$root/home/.oh-my-zsh/custom" \
@@ -134,7 +155,9 @@ printf 'installer atuin-step regression tests\n'
 # The contract, straight from bin/secret_scan.py: the filter atuin gets must be
 # the same set of patterns the leak scanner uses, or the two silently disagree.
 # Expected first, so a drift here fails before any installer output is trusted.
-block=$(expected_block)
+# Python on Windows writes CRLF; the here-document feeding the checks uses
+# LF, so strip CR before comparing the scanner's patterns line by line.
+block=$(expected_block | tr -d '\r')
 while IFS= read -r line; do
     check "scanner pattern reaches the filter: $line" "yes" \
           "$(yes_no contains "$block" "$line")"
