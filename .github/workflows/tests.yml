@@ -33,6 +33,20 @@ jobs:
       - name: Install zsh
         run: sudo apt-get update && sudo apt-get install -y zsh
 
+      # The interactive startup layer needs oh-my-zsh, the three custom plugins
+      # .zshrc lists, and the repo's quiet fzf plugin: the stock fzf plugin
+      # writes "can't change option: zle" to stderr in a non-TTY shell, which
+      # the test treats as a failure.
+      - name: Install oh-my-zsh and zsh plugins
+        run: |
+          git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+          custom="$HOME/.oh-my-zsh/custom"
+          mkdir -p "$custom/plugins/fzf"
+          git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions.git "$custom/plugins/zsh-autosuggestions"
+          git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting.git "$custom/plugins/zsh-syntax-highlighting"
+          git clone --depth=1 https://github.com/Aloxaf/fzf-tab.git "$custom/plugins/fzf-tab"
+          ln -s "$GITHUB_WORKSPACE/zsh/plugins/fzf/fzf.plugin.zsh" "$custom/plugins/fzf/fzf.plugin.zsh"
+
       # Installed from the pinned dev requirements so tests/test_secret_scan.py
       # runs through pytest rather than the plain-python3 fallback.
       - name: Install dev dependencies
