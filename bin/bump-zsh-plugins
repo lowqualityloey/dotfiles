@@ -1,0 +1,209 @@
+#!/bin/sh
+# Bump or validate the CI zsh plugin pins in .github/zsh-plugins.lock.
+#
+#     bin/bump-zsh-plugins            # show which pins would move (no write)
+#     bin/bump-zsh-plugins --write    # rewrite the lock to upstream HEADs
+#     bin/bump-zsh-plugins --check    # fetch every pinned commit to validate it
+#
+# The lock format is: <github owner/repo> <path under $HOME> <full commit SHA>
+# The default is a dry run; --write is required to touch the file. All remotes
+# are resolved before the file is replaced, so a failed lookup leaves the lock
+# untouched. ZSH_PLUGINS_LOCK overrides the lock path (used by the tests).
+
+set -eu
+
+usage() {
+    cat <<'EOF'
+Usage: bin/bump-zsh-plugins [--write | --check]
+
+  (default)   resolve the latest upstream commit for every pin and show the
+              changes without writing
+  --write     rewrite .github/zsh-plugins.lock after every pin resolves
+  --check     fetch each currently pinned commit to prove it still exists
+  -h, --help  show this help
+
+Set ZSH_PLUGINS_LOCK to validate or update a different lock file.
+EOF
+}
+
+die() {
+    printf 'bump-zsh-plugins: %s\n' "$*" >&2
+    exit 1
+}
+
+case ${1:-} in
+    '')
+        mode='plan'
+        ;;
+    --write)
+        mode='write'
+        ;;
+    --check)
+        mode='check'
+        ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *)
+        printf 'bump-zsh-plugins: unknown option: %s\n' "$1" >&2
+        usage >&2
+        exit 2
+        ;;
+esac
+[ "$#" -le 1 ] || {
+    printf 'bump-zsh-plugins: too many arguments\n' >&2
+    usage >&2
+    exit 2
+}
+
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo=$(CDPATH='' cd -- "$here/.." && pwd)
+lock=${ZSH_PLUGINS_LOCK:-"$repo/.github/zsh-plugins.lock"}
+[ -f "$lock" ] || die "lock file not found: $lock"
+
+tmp=$(mktemp -d) || die 'could not create a temporary directory'
+new="$lock.$$.tmp"
+cleanup() {
+    rm -rf "$tmp"
+    rm -f "$new"
+}
+trap cleanup EXIT
+
+export GIT_TERMINAL_PROMPT=0
+
+line_no=0
+rows=0
+changed=0
+: > "$tmp/dests"
+if [ "$mode" = write ]; then
+    : > "$new"
+fi
+
+while IFS= read -r line || [ -n "$line" ]; do
+    line_no=$((line_no + 1))
+
+    case $line in
+        '' | '#'*)
+            if [ "$mode" = write ]; then
+                case $line in
+                    '# Pinned '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].)
+                        printf '# Pinned %s.\n' "$(date +%Y-%m-%d)" >> "$new"
+                        ;;
+                    *)
+                        printf '%s\n' "$line" >> "$new"
+                        ;;
+                esac
+            fi
+            continue
+            ;;
+    esac
+
+    row_repo=
+    row_dest=
+    row_sha=
+    row_extra=
+    read -r row_repo row_dest row_sha row_extra <<EOF
+$line
+EOF
+
+    if [ -n "$row_extra" ]; then
+        die "line $line_no: expected three fields, got more"
+    fi
+    if ! printf '%s\n' "$row_repo" | grep -Eq '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$'; then
+        die "line $line_no: repository must be owner/name"
+    fi
+    case $row_dest in
+        *..*)
+            die "line $line_no: destination must not contain '..'"
+            ;;
+        .oh-my-zsh | .oh-my-zsh/*)
+            ;;
+        *)
+            die "line $line_no: destination must be under .oh-my-zsh/"
+            ;;
+    esac
+    if grep -Fqx "$row_dest" "$tmp/dests"; then
+        die "line $line_no: duplicate destination: $row_dest"
+    fi
+    printf '%s\n' "$row_dest" >> "$tmp/dests"
+    if [ "${#row_sha}" -ne 40 ]; then
+        die "line $line_no: expected a full lowercase 40-character SHA"
+    fi
+    case $row_sha in
+        *[!0-9a-f]*)
+            die "line $line_no: expected a full lowercase 40-character SHA"
+            ;;
+    esac
+
+    url="https://github.com/$row_repo.git"
+
+    if [ "$mode" = check ]; then
+        dir="$tmp/pin-$line_no"
+        mkdir -p "$dir"
+        if ! git init -q "$dir"; then
+            die "line $line_no: could not initialise a temporary repository"
+        fi
+        printf 'validating %s @ %s ... ' "$row_repo" "$row_sha"
+        if git -C "$dir" fetch -q --depth=1 "$url" "$row_sha"; then
+            printf 'ok\n'
+        else
+            printf 'FAILED\n'
+            die "line $line_no: cannot fetch $row_sha from $url"
+        fi
+        rows=$((rows + 1))
+        continue
+    fi
+
+    if ! refs=$(git ls-remote --exit-code "$url" HEAD); then
+        die "line $line_no: could not resolve upstream HEAD for $url"
+    fi
+    latest=$(printf '%s\n' "$refs" | awk 'NR == 1 { print $1 }')
+    if [ "${#latest}" -ne 40 ]; then
+        die "line $line_no: upstream returned an invalid SHA for $url"
+    fi
+    case $latest in
+        *[!0-9a-f]*)
+            die "line $line_no: upstream returned an invalid SHA for $url"
+            ;;
+    esac
+
+    rows=$((rows + 1))
+    if [ "$latest" = "$row_sha" ]; then
+        if [ "$mode" = write ]; then
+            printf '%s\n' "$line" >> "$new"
+        fi
+        continue
+    fi
+
+    changed=$((changed + 1))
+    printf '%s: %s -> %s\n' "$row_repo" "$row_sha" "$latest"
+    if [ "$mode" = write ]; then
+        printf '%s %s %s\n' "$row_repo" "$row_dest" "$latest" >> "$new"
+    fi
+done < "$lock"
+
+[ "$rows" -gt 0 ] || die "no pins found in $lock"
+
+if [ "$mode" = check ]; then
+    printf 'All %d pin(s) are valid.\n' "$rows"
+    exit 0
+fi
+
+if [ "$mode" = plan ]; then
+    if [ "$changed" -eq 0 ]; then
+        printf 'All %d pin(s) are already at upstream HEAD.\n' "$rows"
+    else
+        printf '\n%d pin(s): %d update(s) available. Run with --write to apply.\n' \
+            "$rows" "$changed"
+    fi
+    exit 0
+fi
+
+if [ "$changed" -eq 0 ]; then
+    printf 'Lock is already up to date.\n'
+    exit 0
+fi
+
+mv -f "$new" "$lock"
+printf '\nUpdated %s (%d pin(s)).\n' "$lock" "$changed"

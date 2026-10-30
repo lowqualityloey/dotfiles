@@ -2,4 +2,8 @@
 # on (Windows): a CRLF shebang makes git's hook execution unreliable.
 git/hooks/* text eol=lf
 bin/install-commit-msg-hook text eol=lf
+bin/bump-zsh-plugins text eol=lf
 tests/test-commit-msg-hook.sh text eol=lf
+
+# Parsed line by line by the CI workflow and bin/bump-zsh-plugins.
+.github/zsh-plugins.lock text eol=lf
