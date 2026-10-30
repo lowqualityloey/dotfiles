@@ -134,7 +134,17 @@ def test_default_targets():
 
 
 # --- walk ------------------------------------------------------------------
+def try_symlink(src, dst):
+    """Best-effort symlink: Windows needs a privilege this account may lack."""
+    try:
+        os.symlink(src, dst)
+        return True
+    except (OSError, NotImplementedError):
+        return False
+
+
 def build_tree(root):
+    """Build the fixture; returns whether both symlinks could be created."""
     (root / "keep.txt").write_text("keep")
     (root / "keepdir").mkdir()
     (root / "keepdir" / "nested.txt").write_text("nested")
@@ -149,8 +159,8 @@ def build_tree(root):
     (root / ".cache" / "blob").write_text("x")
     (root / ".secrets").mkdir()
     (root / ".secrets" / "exempt.txt").write_text("secret")
-    os.symlink(root / "keepdir", root / "linkdir")
-    os.symlink(root / "keep.txt", root / "link.txt")
+    linked = try_symlink(root / "keepdir", root / "linkdir")
+    return try_symlink(root / "keep.txt", root / "link.txt") and linked
 
 
 def rels(root, targets, include_stores=False):
@@ -161,9 +171,14 @@ def rels(root, targets, include_stores=False):
 def test_walk():
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        build_tree(root)
-        check("walk: prunes WALK_SKIP dirs and symlinks, honors exemptions",
+        linked = build_tree(root)
+        check("walk: prunes WALK_SKIP dirs and honors exemptions",
               ["keep.txt", "keepdir/nested.txt"], rels(root, [root]))
+        if linked:
+            check("walk: skips symlinked dirs and files",
+                  ["keep.txt", "keepdir/nested.txt"], rels(root, [root]))
+        else:
+            print("  SKIP  walk: symlinks are not permitted for this account")
         check("walk: include_stores reveals the .secrets store",
               [".secrets/exempt.txt", "keep.txt", "keepdir/nested.txt"],
               rels(root, [root], include_stores=True))

@@ -138,11 +138,14 @@ def matches(blob: bytes) -> bool:
 def is_exempt(path: Path, include_stores: bool = False) -> bool:
     if include_stores:
         return False
-    text = str(path)
+    # The suffixes below are written POSIX-style, so compare against as_posix()
+    # rather than str(): on Windows the latter yields backslashes and every
+    # exemption silently stops matching.
+    text = path.as_posix()
     if any(text.endswith(suffix) for suffix in EXEMPT_SUFFIXES):
         return True
     for part in (path, *path.parents):
-        if any(str(part).endswith(suffix) for suffix in EXEMPT_DIR_SUFFIXES):
+        if any(part.as_posix().endswith(suffix) for suffix in EXEMPT_DIR_SUFFIXES):
             return True
     return False
 
