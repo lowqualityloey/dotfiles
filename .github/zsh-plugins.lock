@@ -1,0 +1,10 @@
+# Pinned zsh dependencies for the CI zsh startup test.
+#
+# Format: <github repo> <path under $HOME> <full commit SHA>
+# Bump deliberately; the workflow cache key hashes this file.
+#
+# Pinned 2026-10-30.
+ohmyzsh/ohmyzsh .oh-my-zsh 17a2b4c3a5855524ad4772a17ada0dc474e2fdf3
+zsh-users/zsh-autosuggestions .oh-my-zsh/custom/plugins/zsh-autosuggestions 85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5
+zsh-users/zsh-syntax-highlighting .oh-my-zsh/custom/plugins/zsh-syntax-highlighting e6683f20e5c38d3e5447f45845d04ddda75d0f23
+Aloxaf/fzf-tab .oh-my-zsh/custom/plugins/fzf-tab 24105b15714bfec37989ed5c5b6e60f572253019
