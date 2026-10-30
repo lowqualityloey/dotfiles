@@ -147,6 +147,9 @@ else
         printf '  --- stderr from the interactive shell ---\n'
         sed 's/^/  | /' "$work/live.err"
         printf '  ----------------------------------------\n'
+        printf '  --- compaudit ---\n'
+        ZDOTDIR="$work/live" zsh -i -c 'print -r -- "ZSH_DISABLE_COMPFIX=${ZSH_DISABLE_COMPFIX:-unset}"; autoload -Uz compaudit; compaudit' 2>&1 | sed 's/^/  | /' || true
+        printf '  ----------------\n'
     fi
 
     # A few things defined late in the file, so a truncated config is caught
