@@ -16,7 +16,9 @@ jobs:
     # Stable, descriptive check name: branch protection can require "CI / tests"
     # without it moving when the runner image or the steps below change.
     name: tests
-    runs-on: ubuntu-latest
+    # ubuntu-latest is mid-migration to 26.04 (Oct 19 - Nov 19, 2026); pin the
+    # image so the runner does not change underneath the suite.
+    runs-on: ubuntu-26.04
     steps:
       - name: Check out
         uses: actions/checkout@v7
@@ -25,6 +27,11 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      # test-zsh-startup.sh skips silently without zsh; install it so the
+      # .zshrc parse runs in CI instead of being reported as "ok" while skipped.
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
 
       # Installed from the pinned dev requirements so tests/test_secret_scan.py
       # runs through pytest rather than the plain-python3 fallback.
