@@ -139,9 +139,15 @@ else
     check "interactive startup reaches the end of .zshrc" "yes" \
           "$(yes_no grep -q MARKER_END_OF_ZSHRC "$work/live.ran")"
 
-    # Whatever is on stderr should not be an error message either.
-    check "interactive startup stderr is empty" "0" \
-          "$(wc -c < "$work/live.err" | tr -d ' ')"
+    # Whatever is on stderr should not be an error message either. On failure,
+    # print it: a byte count alone cannot be diagnosed from a CI log.
+    stderr_bytes=$(wc -c < "$work/live.err" | tr -d ' ')
+    check "interactive startup stderr is empty" "0" "$stderr_bytes"
+    if [ "$stderr_bytes" -ne 0 ]; then
+        printf '  --- stderr from the interactive shell ---\n'
+        sed 's/^/  | /' "$work/live.err"
+        printf '  ----------------------------------------\n'
+    fi
 
     # A few things defined late in the file, so a truncated config is caught
     # even if the parse error itself is ever swallowed.
