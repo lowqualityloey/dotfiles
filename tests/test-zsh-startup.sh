@@ -63,11 +63,16 @@ trap 'rm -rf "$work"' EXIT
 #   startup <config-file> <prefix-tag>
 # Sets: <prefix-tag>.err   stderr of the interactive shell
 #       <prefix-tag>.ran   lines the config printed before it was torn down
+#
+# Ubuntu's /etc/zsh/zshrc runs a global compinit before the user's .zshrc, so
+# it cannot see ZSH_DISABLE_COMPFIX and may prompt about vendor-directory
+# permissions (as the hosted runner image does). skip_global_compinit makes
+# the test exercise omz's compinit, which is the one .zshrc configures.
 startup() {
     _dir="$work/$2"
     mkdir -p "$_dir"
     cp "$1" "$_dir/.zshrc"
-    ZDOTDIR="$_dir" zsh -i -c exit >"$work/$2.ran" 2>"$work/$2.err" || true
+    ZDOTDIR="$_dir" skip_global_compinit=1 zsh -i -c exit >"$work/$2.ran" 2>"$work/$2.err" || true
 }
 
 # True when the interactive shell reported a parse error or a refused function
@@ -147,9 +152,6 @@ else
         printf '  --- stderr from the interactive shell ---\n'
         sed 's/^/  | /' "$work/live.err"
         printf '  ----------------------------------------\n'
-        printf '  --- compaudit ---\n'
-        ZDOTDIR="$work/live" zsh -i -c 'print -r -- "ZSH_DISABLE_COMPFIX=${ZSH_DISABLE_COMPFIX:-unset}"; autoload -Uz compaudit; compaudit' 2>&1 | sed 's/^/  | /' || true
-        printf '  ----------------\n'
     fi
 
     # A few things defined late in the file, so a truncated config is caught
@@ -157,7 +159,7 @@ else
     probe='(( $+functions[grid] )) && print -r -- "grid:function" || print -r -- "grid:missing"
            alias dotfiles >/dev/null 2>&1 && print -r -- "dotfiles:alias" || print -r -- "dotfiles:missing"
            alias reload >/dev/null 2>&1 && print -r -- "reload:alias" || print -r -- "reload:missing"'
-    ZDOTDIR="$work/live" zsh -i -c "$probe" 2>/dev/null > "$work/probe.out" || true
+    ZDOTDIR="$work/live" skip_global_compinit=1 zsh -i -c "$probe" 2>/dev/null > "$work/probe.out" || true
     for pair in grid:function dotfiles:alias reload:alias; do
         check "defined after startup: $pair" "yes" \
               "$(yes_no grep -qx "$pair" "$work/probe.out")"
