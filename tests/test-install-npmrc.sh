@@ -1,5 +1,5 @@
 #!/bin/sh
-# Regression tests for install.sh step 9: the ~/.npmrc unknown-key cleanup.
+# Regression tests for install.sh step 10: the ~/.npmrc unknown-key cleanup.
 #
 #     sh tests/test-install-npmrc.sh
 #

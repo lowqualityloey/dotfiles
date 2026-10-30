@@ -28,7 +28,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * **Typography**: `JetBrainsMono Nerd Font` with full symbol support.
   * **Shared Prompt**: **Starship** with the Gruvbox Rainbow preset and a compact 12-hour AM/PM clock (`5:35pm`) across both Linux and Windows.
 * **⚡ Blazing Fast Linux Shell (WSL2 Zsh)**:
-  * Startup time cut from **2.68s to ~0.7s (~3.8x faster)**, measured with `zsh -i -c exit`.
+  * Startup time cut from **2.68s to ~0.7s (~3.8x faster)**, measured with `zsh -i -c exit` on Ubuntu 24.04/WSL2 (Oct 2026).
   * Lazy-loaded NVM and skipped redundant compaudit security checks.
   * 2×2 quad-terminal layout command (`grid`, `grid reset`) with mouse resize and scroll wheel support.
   * Built-in security guardrails: a `zshaddhistory` hook drops credential-shaped commands before they ever reach `~/.zsh_history` (`HIST_IGNORE_SPACE` stays as a manual second layer), if you use atuin, `install.sh` writes a matching `history_filter` into `~/.config/atuin/config.toml` (atuin records via `preexec`/`precmd`, so the hook never sees it); gitignored `~/.zshrc.local` holds machine-specific secrets, and a daily systemd timer reports any key-shaped strings left behind in agent caches (see [Credential-Leak Monitoring](#-credential-leak-monitoring)).
@@ -41,7 +41,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * **Linux/Zsh Parity Bridges**: `which`, `grep`, `touch`, `open`, `pbcopy`/`pbpaste`, `cdwsl`, and git helpers (`gst`, `gp`, `gl`, `gco`, `gcb`) plus `lg` for LazyGit.
   * **Kiro & Chocolatey Integration**: Sources the Kiro shell integration when `$env:TERM_PROGRAM` is `kiro`, and loads `chocolateyProfile.psm1` when present.
   * **Private Overrides**: Automatically loads gitignored `$HOME/.profile.local.ps1` if present.
-* **🔍 Modern Rust CLI Suite**:
+* **🔍 Modern CLI Suite**:
   * `fzf` & `fd`: Fuzzy file finding (<kbd>Ctrl</kbd> + <kbd>T</kbd>) and history search (<kbd>Ctrl</kbd> + <kbd>R</kbd>).
   * `zoxide`: Smart directory jumping (`z <folder>`, `zi`).
   * `eza`: Colorized directory listings with Git status and file icons (`ls`, `ll`, `tree`).
@@ -56,13 +56,13 @@ A unified, high-performance, cross-platform terminal environment optimized for d
   * `dust`: Visual disk usage (`dust -d 1 ~/project`). Find bloat (node_modules, target/) before it eats agent context.
   * `duf`: Readable disk-free overview (`duf -only local`).
   * `hyperfine`: Quick benchmarks (`hyperfine 'cmd1' 'cmd2'`). Verify a "faster" approach before committing to it.
-  * The last four are deliberately **not** aliased over `ps`, `sed` or `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd`, `ouch`, `tokei`, `difft`, `just`, `dust`, `duf` and `hyperfine` are Linux-only.
+  * `procs`, `sd` and `fd` are deliberately **not** aliased over `ps`, `sed` and `find`: those replacements have different output and escaping, so shadowing them breaks scripts and pipelines that parse the originals. `procs` and `tldr` are installed on Windows too (`windows/install.ps1`); `sd`, `ouch`, `tokei`, `difft`, `just`, `dust`, `duf` and `hyperfine` are Linux-only.
   * `lazygit`: Full-screen Git terminal UI (`lg`), with its diff panel rendered through `delta` so it matches `git diff`.
   * `delta`: Gruvbox-themed diffs as the Git pager, with line numbers and move detection. Goes side-by-side on terminals at least 100 columns wide and falls back to a unified diff below that (config `git/delta.gitconfig`, wrapper `bin/delta-pager`). Note that side-by-side truncates individual very long lines at *any* width — delta marks them with `↴` — so a wide window helps but does not eliminate it.
 * **🤖 No AI Attribution in Commits**:
   * `git/hooks/commit-msg` removes `Generated with Codebuff`/`Freebuff` lines and the matching `Co-Authored-By:` trailer after the message is written; human co-authors and other trailers such as `HeyLoey-Milestone:` are kept.
   * Installed through git's `init.templateDir` for new clones and `bin/install-commit-msg-hook` for existing checkouts, so `core.hooksPath` is never touched and each repo keeps its own hooks (husky, git-lfs, post-commit).
-  * `AGENTS.md` is linked to `~/.AGENTS.md` so agents are told not to add the footer in the first place.
+  * `AGENTS.md` is linked to `~/.AGENTS.md` on Linux and copied there on Windows, so agents are told not to add the footer in the first place; after editing the repo copy on Windows, re-run the installer.
 * **🔁 Portable by Design**:
   * No hardcoded usernames, WSL distro names, or user-specific home paths. Linux uses `$HOME`; on Windows `cdwsl` resolves the default distro and its home at runtime. (The one absolute path left is Linuxbrew's fixed `/home/linuxbrew/.linuxbrew`, which is identical on every machine that installs it.)
   * Optional tools that may be absent (`brew`, `atuin`, GitButler, `oh-my-posh`) are skipped cleanly instead of erroring on a fresh machine.
@@ -73,6 +73,7 @@ A unified, high-performance, cross-platform terminal environment optimized for d
 
 ```text
 dotfiles/
+├── .gitattributes                   # Keeps LF on hooks and scripts git executes
 ├── .gitignore                       # Safeguard against committing secrets & temp files
 ├── LICENSE                          # MIT License
 ├── .zshrc                           # Optimized Zsh configuration (WSL2)
@@ -97,6 +98,7 @@ dotfiles/
 │   ├── test-commit-msg-hook.sh      # Regression tests for the attribution stripper
 │   ├── test-delta-pager.sh          # Regression tests for the pager width threshold
 │   ├── test-install-atuin.sh        # Regression tests for the installer's atuin step
+│   ├── test-install-npmrc.sh        # Regression tests for the installer's npmrc cleanup
 │   ├── test-secret-leaks.sh         # Regression tests for the credential-leak scanner
 │   ├── test-zsh-startup.sh          # Checks an interactive shell starts without parse errors
 │   └── test_secret_scan.py          # Unit tests for the shared scan module
@@ -137,6 +139,8 @@ Before running the installers:
   sudo apt update && sudo apt install -y zsh git curl
   ```
   *(The installer automatically installs Oh My Zsh and clones missing custom plugins for you).*
+* **Windows 11**: PowerShell 7 (`pwsh`), Git for Windows, and WinGet (bundled with Windows 11). The installer writes the PowerShell 7 and 5.1 profiles, installs its modules, and uses WinGet for the CLI tools.
+* **Optional**: Python 3.11+ enables the atuin `history_filter` step, and a systemd-enabled WSL enables the daily credential-leak timer; both are skipped when unavailable.
 
 ---
 
@@ -146,10 +150,15 @@ Before running the installers:
 ```bash
 git clone https://github.com/lowqualityloey/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-chmod +x install.sh
 ./install.sh
-source ~/.zshrc
+exec zsh        # start zsh now
+# optional, to make it your login shell:
+# chsh -s "$(command -v zsh)"
 ```
+
+The installer configures `.zshrc` but does not change your login shell, so a fresh machine is still in bash after `./install.sh`. `exec zsh` switches this terminal; the optional `chsh` makes zsh the default for future ones. `source ~/.zshrc` only works once you are already in zsh — in bash it fails on zsh-only syntax.
+
+The installer also prunes keys the installed npm no longer recognises from `~/.npmrc` (backup: `~/.dotfiles_backup_<timestamp>/npmrc`); it is skipped when npm or `~/.npmrc` is absent.
 
 ### 2. On Windows 11 (PowerShell 7)
 Open **PowerShell 7** as your standard user:
@@ -245,7 +254,7 @@ history_filter = [
 
 * **`check-secret-leaks`** walks those stores, prints one line per affected file, and exits non-zero when it finds key-shaped strings.
 * **`scrub-secrets`** redacts them — dry-run by default, `--apply` to write. It rewrites SQLite databases in place with `secure_delete` + WAL checkpoint + `VACUUM`, so the old bytes do not survive in free pages.
-* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; on WSL2 that measured 1.5s with the agent caches idle and 12s while a 131 MB transcript was being rewritten, versus about 79s for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped). Both figures scale with how much those caches have grown and how actively they are being written.
+* **Windows-side too (WSL)**: these tools keep the same caches on the Windows drive, so the profile under `C:\Users\<you>` is swept as well — resolved at runtime via `wslvar USERPROFILE` (never hardcoded), covering `.codex`, `.gemini`, `.claude`, `.dsh`, `AppData/Roaming/Code/User`, `AppData/Local/OpenAI` and friends. Pass `--no-windows` for a Linux-only scan; on Ubuntu 24.04/WSL2 (Oct 2026) that took 1.5s with the agent caches idle and 12s while a 131 MB transcript was being rewritten, versus about 79s for a full `/mnt/c` sweep (browser profiles and VS Code caches are skipped). Both figures scale with how much those caches have grown and how actively they are being written.
 * **Daily timer**: `install.sh` installs `secret-leak-check.timer`, which runs the check once a day and records the result in the user journal.
 
 ```bash
@@ -265,7 +274,7 @@ journalctl --user -u secret-leak-check --since yesterday
 
 ## 🔄 Daily Workflow & Syncing
 
-An alias `dotfiles` is configured in your shell to track and manage this repo from anywhere:
+In WSL2/Zsh, an alias `dotfiles` is configured to track and manage this repo from anywhere (in PowerShell, use `git -C "$HOME\dotfiles"`):
 
 ```zsh
 dotfiles status
@@ -302,6 +311,10 @@ ok: test-delta-pager.sh
 ...
 ok: test-install-atuin.sh
 
+== test-install-npmrc.sh ==
+...
+ok: test-install-npmrc.sh
+
 == test-secret-leaks.sh ==
 ...
 ok: test-secret-leaks.sh
@@ -313,13 +326,13 @@ ok: test-zsh-startup.sh
 Python tests: pytest 9.1.1
 
 == test_secret_scan.py [pytest] ==
-5 passed in 0.04s
+6 passed in 0.02s
 ok: test_secret_scan.py [pytest]
 
 == shellcheck ==
 ok: shellcheck
 
-7 check(s) run, 0 failed
+8 check(s) run, 0 failed
 ```
 
 Flags and overrides:
@@ -328,7 +341,7 @@ Flags and overrides:
 * `-h`, `--help` — show usage.
 * `PYTHON=/path/to/python3` — run the Python tests with a different interpreter.
 
-The runner discovers `tests/test-*.sh` (run with `sh`) and `tests/test_*.py` (run with `pytest` when it is importable, otherwise plainly with `python3`), so a new test only has to be dropped in the directory and any single test can still be run directly. When pytest is used the runner names the version it picked (`Python tests: pytest 9.1.1`); `requirements-dev.txt` pins that version — install it with `python3 -m pip install -r requirements-dev.txt`, or point `PYTHON` at a virtualenv that already has it. The lint step covers `install.sh`, every `sh`/`bash` script in `bin/`, and the tests themselves; it is skipped with a note when `shellcheck` is not installed.
+The runner discovers `tests/test-*.sh` (run with `sh`) and `tests/test_*.py` (run with `pytest` when it is importable, otherwise plainly with `python3`), so a new test only has to be dropped in the directory and any single test can still be run directly. When pytest is used the runner names the version it picked (`Python tests: pytest 9.1.1`); `requirements-dev.txt` pins that version — install it with `python3 -m pip install -r requirements-dev.txt`, or point `PYTHON` at a virtualenv that already has it. The lint step covers `install.sh`, `git/hooks/commit-msg`, every `sh`/`bash` script in `bin/`, and the tests themselves; it is skipped with a note when `shellcheck` is not installed.
 
 The suite also runs in CI on pushes to `main` and `wip/**` branches, and on pull requests — see `.github/workflows/tests.yml`. It reports one stable status check, `CI / tests`, that branch protection can require. The job installs pytest so the pytest path is exercised, and asserts `shellcheck` is present so a green run always includes the lint.
 
@@ -336,9 +349,9 @@ The pager wrapper's only job is choosing a flag, so its tests stub `delta` and `
 
 `test-zsh-startup.sh` guards against the one failure mode that is otherwise invisible: zsh abandons the rest of `.zshrc` at the first parse error and still exits 0, so a broken config looks like a working one. It first checks the file against synthetic broken and clean fixtures, so the detector itself is known to work rather than assumed to, then starts a real interactive shell against a *copy* of the config in a temporary `ZDOTDIR` and asserts the run reaches the end and leaves stderr empty. Defining a function over an existing alias — which oh-my-zsh's git plugin makes easy to hit — is one of the cases it reproduces deliberately.
 
-`test-install-atuin.sh` covers the installer step that rewrites `history_filter` in your hand-edited atuin config, the only step that edits a key inside a user file. It runs the whole installer inside a throwaway sandbox — temp `HOME`, a short `PATH` of symlinks, stubbed `atuin` and `systemctl`, and a pre-made oh-my-zsh — then asserts the write is idempotent, that a backup holds the pre-change bytes, that a stale filter is replaced in place while neighbouring sections survive, that the result still parses as TOML, and that every written pattern compiles as a regex and matches `bin/secret_scan.py` exactly. It skips when `python3` predates `tomllib`.
+`test-install-atuin.sh` covers the installer step that rewrites `history_filter` in your hand-edited atuin config — one of two steps that rewrite a hand-edited config in place, alongside the `~/.npmrc` cleanup. It runs the whole installer inside a throwaway sandbox — temp `HOME`, a short `PATH` of symlinks, stubbed `atuin` and `systemctl`, and a pre-made oh-my-zsh — then asserts the write is idempotent, that a backup holds the pre-change bytes, that a stale filter is replaced in place while neighbouring sections survive, that the result still parses as TOML, and that every written pattern compiles as a regex and matches `bin/secret_scan.py` exactly. It skips when `python3` predates `tomllib`.
 
-Nothing in the suite touches a real home directory, secret, Windows profile, the network, or your live shell config; the two new tests skip with a note when `zsh`, oh-my-zsh, or a suitable `python3` is missing, so a reduced CI runner loses coverage rather than reporting a false failure.
+Nothing in the suite touches a real home directory, secret, Windows profile, the network, or your live shell config; the installer and startup tests skip with a note when `bash`, `zsh` with oh-my-zsh, or Python 3.11+ is missing, so a reduced CI runner loses coverage rather than reporting a false failure.
 
 ---
 

@@ -180,3 +180,9 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 
 Write-Host "==> Windows setup complete! Run 'reload' or restart PowerShell 7." -ForegroundColor Green
+
+# Load the just-written profile so `reload` also works in this session.
+if (Test-Path $PROFILE) {
+    try { . $PROFILE }
+    catch { Write-Warning "Profile installed; restart PowerShell 7 if 'reload' is unavailable." }
+}

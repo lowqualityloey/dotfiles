@@ -344,7 +344,7 @@ zed() {
 }
 
 # Added by flyctl installer
-export FLYCTL_INSTALL="/home/heyloey/.fly"
+export FLYCTL_INSTALL="$HOME/.fly"
 export PATH="$FLYCTL_INSTALL/bin:$PATH"
 
 # gh reads $XDG_CONFIG_HOME/gh/hosts.yml, and XDG_CONFIG_HOME points at
