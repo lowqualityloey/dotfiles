@@ -1,0 +1,392 @@
+#!/usr/bin/env bash
+# Hook drift guard: the milestone post-commit hook is installed by hand in several
+# places, and those copies must not silently diverge.
+#
+# Why: the hook was maintained as two variants. When the Windows-capable version
+# landed in the Windows git template and one repository, the WSL git template kept
+# the older file, and nothing noticed. This check notices.
+#
+# Personal tooling: it spans machines and repositories rather than belonging to any
+# one project, so it lives in dotfiles/bin. Nothing below hardcodes a user name or a
+# drive path - every location is configured, discovered, or reported as unknown.
+#
+# Two kinds of target, because they answer different questions:
+#
+#   copy     A file seeded from the git template: it MUST be byte-identical to the
+#            template. This covers every git template and any repository whose hook
+#            is a seeded copy.
+#   tracked  The hook a repository actually runs when it sets `core.hooksPath`
+#            (the vault is one). Such a repository owns its hook - it is a different
+#            program, deliberately, and the template is not its ancestor. It must
+#            instead match what that repository has COMMITTED, so an uncommitted edit
+#            to the live hook is caught.
+#
+# Usage: hook-drift [--template PATH] [--target PATH]... [--repo PATH]...
+#                   [--vault PATH] [--windows-home PATH]
+#
+# Resolution, first hit wins:
+#   template     --template, $HOOK_DRIFT_TEMPLATE, `git config --global
+#                init.templateDir` + /hooks/post-commit, $HOME/.git-template, then
+#                the same under the Windows home. Every other template found is
+#                checked as a `copy` target.
+#   windows home --windows-home, $HOOK_DRIFT_WINDOWS_HOME, $USERPROFILE, or
+#                `cmd.exe /c echo %USERPROFILE%`; failing those, the one
+#                <drive>/Users/<name> that actually holds a template or the vault.
+#   vault        --vault, $LOEY_SPACE_DIR, $LOEY_VAULT_ROOT, then
+#                <windows home>/Documents/loey_space. Reported as skipped, never
+#                guessed, when none resolve.
+#   repositories --repo (repeatable) when given, else the repository containing the
+#                current directory.
+#
+# Records (one per line, `|`-delimited):
+#   HOOK_DRIFT|PASS|<n> identical, <m> skipped, checked against <template>
+#   HOOK_DRIFT|FAIL|<path>|content differs from the template|expected=<sha> actual=<sha>
+#   HOOK_DRIFT|FAIL|<path>|line endings differ (CRLF vs LF), which breaks this bash hook|expected=<sha> actual=<sha>
+#   HOOK_DRIFT|FAIL|<path>|differs from the committed version at HEAD:<rel>; commit it or restore it|expected=<sha> actual=<sha>
+#   HOOK_DRIFT|FAIL|<path>|not executable; git will not run it
+#   HOOK_DRIFT|MISSING|<path>|no post-commit hook installed here
+#   HOOK_DRIFT|NOTE|<path>|<observation>
+#   HOOK_DRIFT|SKIP|<path>|<reason>
+#   HOOK_DRIFT|REMEDIATION|<prose>
+#   HOOK_DRIFT|USAGE|<detail>
+#
+# Exit: 0 = every copy identical and every tracked hook matches its commit,
+#       1 = divergence, uncommitted live edit, or a missing install,
+#       2 = usage error or the template itself is missing (nothing to compare).
+
+set -u
+
+template_arg=""
+vault_override=""
+windows_home_arg=""
+repos=()
+targets=()
+kinds=()
+notes=()
+explicit_targets=0
+explicit_repos=0
+root="."
+
+usage() {
+    cat <<'EOF'
+Usage: hook-drift [--template PATH] [--target PATH]... [--repo PATH]...
+                  [--vault PATH] [--windows-home PATH]
+
+  --template PATH      the git template post-commit hook (the source of truth)
+  --target PATH        add a seeded copy to compare; repeatable
+  --repo PATH          add a repository whose hook to check; repeatable
+  --vault PATH         the vault repository (default: $LOEY_SPACE_DIR)
+  --windows-home PATH  the Windows profile, when it cannot be discovered
+
+Exit: 0 pass, 1 drift or uncommitted live edit, 2 usage error or no template.
+EOF
+}
+
+require_value() {
+    [ "$#" -ge 2 ] || { printf 'HOOK_DRIFT|USAGE|%s requires a path\n' "$1"; exit 2; }
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --template) require_value "$@"; template_arg="$2"; shift 2 ;;
+        --template=*) template_arg="${1#*=}"; shift ;;
+        --target) require_value "$@"; targets+=("$2"); kinds+=("copy"); explicit_targets=1; shift 2 ;;
+        --target=*) targets+=("${1#*=}"); kinds+=("copy"); explicit_targets=1; shift ;;
+        --repo) require_value "$@"; repos+=("$2"); explicit_repos=1; shift 2 ;;
+        --repo=*) repos+=("${1#*=}"); explicit_repos=1; shift ;;
+        --vault) require_value "$@"; vault_override="$2"; shift 2 ;;
+        --vault=*) vault_override="${1#*=}"; shift ;;
+        --windows-home) require_value "$@"; windows_home_arg="$2"; shift 2 ;;
+        --windows-home=*) windows_home_arg="${1#*=}"; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) printf 'HOOK_DRIFT|USAGE|Unknown argument: %s\n' "$1"; exit 2 ;;
+    esac
+done
+
+# --- discovery -------------------------------------------------------------
+# `C:\Users\name` means nothing to a POSIX shell; each flavour gets its spelling.
+to_msys() {
+    _p=${1//\\//}
+    case "$_p" in
+        [A-Za-z]:/*)
+            printf '/%s%s' "$(printf '%s' "${_p:0:1}" | tr '[:upper:]' '[:lower:]')" "${_p:2}" ;;
+        *) printf '%s' "$_p" ;;
+    esac
+}
+
+windows_path_to_local() {
+    if command -v wslpath >/dev/null 2>&1; then
+        _converted=$(wslpath -u "$1" 2>/dev/null) && [ -n "$_converted" ] && {
+            printf '%s' "$_converted"; return 0; }
+    fi
+    to_msys "$1"
+}
+
+windows_home=""
+if [ -n "$windows_home_arg" ]; then
+    windows_home="$windows_home_arg"
+elif [ -n "${HOOK_DRIFT_WINDOWS_HOME:-}" ]; then
+    windows_home="$HOOK_DRIFT_WINDOWS_HOME"
+else
+    _raw="${USERPROFILE:-}"
+    if [ -z "$_raw" ] && command -v cmd.exe >/dev/null 2>&1; then
+        _raw=$(cmd.exe /c echo '%USERPROFILE%' </dev/null 2>/dev/null | tr -d '\r')
+    fi
+    case "$_raw" in
+        [A-Za-z]:\\*|[A-Za-z]:/**) windows_home=$(windows_path_to_local "$_raw") ;;
+    esac
+fi
+if [ -z "$windows_home" ] || [ ! -d "$windows_home" ]; then
+    windows_home=""
+    # Last resort: the one profile directory that actually holds something we want.
+    for _root in /mnt/[a-zA-Z]/Users /[a-zA-Z]/Users; do
+        [ -d "$_root" ] || continue
+        for _cand in "$_root"/*/; do
+            _cand=${_cand%/}
+            if [ -e "$_cand/.git-template/hooks/post-commit" ] || [ -d "$_cand/Documents/loey_space" ]; then
+                windows_home="$_cand"
+                break 2
+            fi
+        done
+    done
+fi
+
+# `git config` may hand back ~, a relative path, or a Windows drive path.
+init_template_dir=$(git config --global --get init.templateDir 2>/dev/null || true)
+case "$init_template_dir" in
+    /*|[A-Za-z]:[/\\]*) : ;;
+    "") : ;;
+    *)
+        # A leading ~ means $HOME; anything else is relative to the home dir.
+        init_template_dir="${init_template_dir/#~/$HOME}"
+        case "$init_template_dir" in
+            /*) : ;;
+            *) init_template_dir="$HOME/$init_template_dir" ;;
+        esac
+        ;;
+esac
+
+template_candidates=()
+[ -n "$template_arg" ] && template_candidates+=("$template_arg")
+[ -n "${HOOK_DRIFT_TEMPLATE:-}" ] && template_candidates+=("$HOOK_DRIFT_TEMPLATE")
+[ -n "$init_template_dir" ] && template_candidates+=("$init_template_dir/hooks/post-commit")
+[ -n "${HOME:-}" ] && template_candidates+=("$HOME/.git-template/hooks/post-commit")
+[ -n "$windows_home" ] && template_candidates+=("$windows_home/.git-template/hooks/post-commit")
+
+# An explicit --template or $HOOK_DRIFT_TEMPLATE is honoured even when absent, so a
+# typo is reported as MISSING instead of silently falling through to a default.
+template=""
+if [ -n "$template_arg" ]; then
+    template="$template_arg"
+elif [ -n "${HOOK_DRIFT_TEMPLATE:-}" ]; then
+    template="$HOOK_DRIFT_TEMPLATE"
+else
+    for _cand in ${template_candidates[@]+"${template_candidates[@]}"}; do
+        if [ -f "$_cand" ]; then template="$_cand"; break; fi
+    done
+fi
+
+if [ -z "$template" ]; then
+    printf 'HOOK_DRIFT|USAGE|no git template hook found; looked at: %s\n' \
+        "$(printf '%s, ' ${template_candidates[@]+"${template_candidates[@]}"} | sed 's/, $//')"
+    printf 'HOOK_DRIFT|USAGE|set one explicitly: hook-drift --template <path>, or git config --global init.templateDir <dir>\n'
+    exit 2
+fi
+if [ ! -f "$template" ]; then
+    printf 'HOOK_DRIFT|MISSING|%s|the template copy is absent, so there is nothing to compare against\n' "$template"
+    exit 2
+fi
+
+sha256_of() {
+    if command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$1" | awk '{print $1}'
+    else
+        shasum -a 256 "$1" | awk '{print $1}'
+    fi
+}
+
+# Same file under two spellings (WSL $HOME and the Windows profile coincide in
+# Git Bash) must not be checked twice.
+canonical_path() {
+    (cd -- "$(dirname -- "$1")" 2>/dev/null &&
+        printf '%s/%s' "$(pwd -P)" "$(basename -- "$1")") || printf '%s' "$1"
+}
+
+hooks_path_of() {
+    git -C "$1" config --get core.hooksPath 2>/dev/null || true
+}
+
+# Resolve a repository's effective hook path, honouring core.hooksPath and linked
+# worktrees (where .git is a file). Always absolute.
+hook_path_for() {
+    _dir="$1"
+    if [ -d "$_dir" ]; then
+        _abs=$(cd -- "$_dir" 2>/dev/null && pwd -P) || _abs=""
+        _p=$(cd -- "$_dir" 2>/dev/null && git rev-parse --git-path hooks/post-commit 2>/dev/null)
+        if [ -n "${_p:-}" ]; then
+            case "$_p" in
+                /*) printf '%s' "$_p" ;;
+                *)  printf '%s/%s' "$_abs" "${_p#./}" ;;
+            esac
+            return 0
+        fi
+        [ -n "$_abs" ] && { printf '%s/.git/hooks/post-commit' "$_abs"; return 0; }
+    fi
+    printf '%s/.git/hooks/post-commit' "$_dir"
+}
+
+# A repository that sets core.hooksPath owns its hook; one that does not runs the
+# file the template seeds.
+add_repo_target() {
+    _dir=$(cd -- "$1" 2>/dev/null && pwd -P) || _dir="$1"
+    _hook=$(hook_path_for "$_dir")
+    # The same hook reached twice (cwd is the vault, or --repo repeats it) is
+    # one file, not two results.
+    _hook_canon=$(canonical_path "$_hook")
+    for _existing in ${targets[@]+"${targets[@]}"}; do
+        [ "$(canonical_path "$_existing")" = "$_hook_canon" ] && return 0
+    done
+    _hp=$(hooks_path_of "$_dir")
+    if [ -n "$_hp" ]; then
+        targets+=("$_hook"); kinds+=("tracked|$_dir")
+        if [ -f "$_dir/.git/hooks/post-commit" ] && [ "$_hook" != "$_dir/.git/hooks/post-commit" ]; then
+            notes+=("HOOK_DRIFT|NOTE|$_dir/.git/hooks/post-commit|inert: this repository sets core.hooksPath=$_hp, so git runs $_hook instead")
+        fi
+    else
+        targets+=("$_hook"); kinds+=("copy")
+    fi
+}
+
+vault="${vault_override:-${LOEY_SPACE_DIR:-${LOEY_VAULT_ROOT:-}}}"
+vault_origin="--vault or \$LOEY_SPACE_DIR/\$LOEY_VAULT_ROOT"
+if [ -z "$vault" ] && [ -n "$windows_home" ]; then
+    vault="$windows_home/Documents/loey_space"
+    vault_origin="discovered under $windows_home"
+fi
+vault_abs=""
+if [ -n "$vault" ] && [ -d "$vault" ]; then
+    vault_abs=$(cd -- "$vault" 2>/dev/null && pwd -P) || vault_abs="$vault"
+fi
+
+skipped=0
+if [ "$explicit_targets" -eq 0 ]; then
+    if [ "$explicit_repos" -eq 1 ]; then
+        for _repo in "${repos[@]}"; do add_repo_target "$_repo"; done
+    elif _err=$(git -C "$root" rev-parse --is-inside-work-tree 2>&1 >/dev/null); then
+        add_repo_target "$root"
+    else
+        case "$_err" in
+            *safe.directory*)
+                notes+=("HOOK_DRIFT|NOTE|$root|this shell's git refuses the repository (dubious ownership); run the check from WSL, or add the path to safe.directory")
+                ;;
+            *)
+                notes+=("HOOK_DRIFT|NOTE|$root|not a git repository; this repository's hook was not checked")
+                ;;
+        esac
+        skipped=$((skipped + 1))
+    fi
+
+    # Every other template is a copy of this one, not a second source of truth.
+    template_canon=$(canonical_path "$template")
+    for _cand in ${template_candidates[@]+"${template_candidates[@]}"}; do
+        [ -f "$_cand" ] || continue
+        [ "$(canonical_path "$_cand")" = "$template_canon" ] && continue
+        _dupe=0
+        for _seen in ${targets[@]+"${targets[@]}"}; do
+            [ "$(canonical_path "$_seen")" = "$(canonical_path "$_cand")" ] && { _dupe=1; break; }
+        done
+        [ "$_dupe" -eq 1 ] || { targets+=("$_cand"); kinds+=("copy"); }
+    done
+
+    if [ -n "$vault_abs" ]; then
+        add_repo_target "$vault_abs"
+    else
+        skipped=$((skipped + 1))
+    fi
+fi
+
+for note in ${notes[@]+"${notes[@]}"}; do printf '%s\n' "$note"; done
+
+expected_sha=$(sha256_of "$template")
+identical=0
+failures=0
+tmp_dir=$(mktemp -d 2>/dev/null) || tmp_dir=""
+trap '[ -n "$tmp_dir" ] && rm -rf "$tmp_dir"' EXIT INT TERM
+
+for i in "${!targets[@]}"; do
+    target="${targets[$i]}"
+    kind="${kinds[$i]%%|*}"
+
+    if [ ! -f "$target" ]; then
+        printf 'HOOK_DRIFT|MISSING|%s|no post-commit hook installed here\n' "$target"
+        failures=$((failures + 1))
+        continue
+    fi
+
+    if [ "$kind" = "tracked" ]; then
+        repo="${kinds[$i]#*|}"
+        rel="${target#"$repo"/}"
+        if [ -z "$tmp_dir" ]; then
+            printf 'HOOK_DRIFT|SKIP|%s|no temporary directory available to read the committed copy\n' "$target"
+            skipped=$((skipped + 1))
+            continue
+        fi
+        if ! git -C "$repo" cat-file -e "HEAD:$rel" 2>/dev/null; then
+            printf 'HOOK_DRIFT|NOTE|%s|repository-owned hook is not tracked at HEAD; nothing to compare\n' "$target"
+            skipped=$((skipped + 1))
+            continue
+        fi
+        git -C "$repo" show "HEAD:$rel" > "$tmp_dir/committed" 2>/dev/null
+        if ! cmp -s "$tmp_dir/committed" "$target"; then
+            printf 'HOOK_DRIFT|FAIL|%s|differs from the committed version at HEAD:%s; commit it or restore it|expected=%s actual=%s\n' \
+                "$target" "$rel" "$(sha256_of "$tmp_dir/committed")" "$(sha256_of "$target")"
+            failures=$((failures + 1))
+            continue
+        fi
+        if [ ! -x "$target" ]; then
+            printf 'HOOK_DRIFT|FAIL|%s|not executable; git will not run it\n' "$target"
+            failures=$((failures + 1))
+            continue
+        fi
+        identical=$((identical + 1))
+        continue
+    fi
+
+    if ! cmp -s "$template" "$target"; then
+        actual_sha=$(sha256_of "$target")
+        if command -v diff >/dev/null 2>&1 && diff -q --strip-trailing-cr "$template" "$target" >/dev/null 2>&1; then
+            printf 'HOOK_DRIFT|FAIL|%s|line endings differ (CRLF vs LF), which breaks this bash hook at run time|expected=%s actual=%s\n' \
+                "$target" "$expected_sha" "$actual_sha"
+        else
+            printf 'HOOK_DRIFT|FAIL|%s|content differs from the template|expected=%s actual=%s\n' \
+                "$target" "$expected_sha" "$actual_sha"
+        fi
+        failures=$((failures + 1))
+        continue
+    fi
+    if [ ! -x "$target" ]; then
+        printf 'HOOK_DRIFT|FAIL|%s|not executable; git will not run it\n' "$target"
+        failures=$((failures + 1))
+        continue
+    fi
+    identical=$((identical + 1))
+done
+
+if [ "$failures" -gt 0 ]; then
+    printf 'HOOK_DRIFT|FAIL|%d identical, %d issue(s), %d skipped, checked against %s\n' \
+        "$identical" "$failures" "$skipped" "$template"
+    printf 'HOOK_DRIFT|REMEDIATION|Reinstall a drifted copy from the template: install -m 755 %s <target>. A repository-owned hook must match its own commit: commit the change, or restore the committed version.\n' \
+        "$template"
+    exit 1
+fi
+
+if [ -z "$vault_abs" ]; then
+    if [ -n "$vault" ]; then
+        printf 'HOOK_DRIFT|SKIP|%s|vault from %s is not present; nothing to compare\n' "$vault" "$vault_origin"
+    else
+        printf 'HOOK_DRIFT|SKIP|loey_space|no vault found; set --vault, or LOEY_SPACE_DIR / LOEY_VAULT_ROOT, to include it\n'
+    fi
+fi
+printf 'HOOK_DRIFT|PASS|%d identical, %d skipped, checked against %s\n' \
+    "$identical" "$skipped" "$template"
+exit 0

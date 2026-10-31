@@ -40,7 +40,8 @@ link_file "$DOTFILES_DIR/bin/cheatsheet" "$HOME/.local/bin/cheatsheet"
 link_file "$DOTFILES_DIR/bin/scrub-secrets" "$HOME/.local/bin/scrub-secrets"
 link_file "$DOTFILES_DIR/bin/check-secret-leaks" "$HOME/.local/bin/check-secret-leaks"
 link_file "$DOTFILES_DIR/bin/delta-pager" "$HOME/.local/bin/delta-pager"
-chmod +x "$DOTFILES_DIR"/bin/cheatsheet "$DOTFILES_DIR"/bin/scrub-secrets "$DOTFILES_DIR"/bin/check-secret-leaks "$DOTFILES_DIR"/bin/delta-pager 2>/dev/null || true
+link_file "$DOTFILES_DIR/bin/hook-drift" "$HOME/.local/bin/hook-drift"
+chmod +x "$DOTFILES_DIR"/bin/cheatsheet "$DOTFILES_DIR"/bin/scrub-secrets "$DOTFILES_DIR"/bin/check-secret-leaks "$DOTFILES_DIR"/bin/delta-pager "$DOTFILES_DIR"/bin/hook-drift 2>/dev/null || true
 # secret_scan.py is imported next to the real script, so the symlinks above work.
 
 # 3. Check Oh My Zsh

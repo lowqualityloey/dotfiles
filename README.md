@@ -112,6 +112,7 @@ dotfiles/
 │   ├── cheatsheet                   # Interactive ANSI terminal reference tool
 │   ├── check-secret-leaks           # Flags credential-shaped strings in local logs/caches
 │   ├── delta-pager                  # Width-aware Git pager wrapper for delta
+│   ├── hook-drift                   # Guards the milestone post-commit hook copies
 │   ├── install-commit-msg-hook      # Adds the hook to repositories that already exist
 │   ├── scrub-secrets                # Redacts those strings (dry-run by default)
 │   └── secret_scan.py               # Shared detection patterns for the two tools
@@ -203,6 +204,7 @@ reload
 | **`cddoc`** | Windows | Jump directly to Documents folder (supports OneDrive or local Documents) |
 | **`check-secret-leaks`** | WSL2 | Report credential-shaped strings in local agent logs/caches (exits 1 if any) |
 | **`scrub-secrets`** | WSL2 | Redact those strings (`--apply`; dry-run by default) |
+| **`hook-drift`** | WSL2 & Win | Check every milestone post-commit hook copy against the git template, and repo-owned hooks against their commit |
 | **`reload`** | WSL2 & Win | Re-source shell profile without restarting terminal window |
 | **`sysclean`** | Windows (PS7) | Flush DNS and clean temporary system files |
 | **`sysupdate`** | Windows (PS7) | Upgrade all Windows apps via WinGet and Chocolatey |
