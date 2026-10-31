@@ -35,8 +35,9 @@
 #   vault        --vault, $LOEY_SPACE_DIR, $LOEY_VAULT_ROOT, then
 #                <windows home>/Documents/loey_space. Reported as skipped, never
 #                guessed, when none resolve.
-#   repositories --repo (repeatable) when given, else the repository containing the
-#                current directory.
+#   repositories --repo (repeatable, each must have the hook) when given, else the
+#                repository containing the current directory, where never having
+#                installed the hook is reported as a note rather than drift.
 #
 # Records (one per line, `|`-delimited):
 #   HOOK_DRIFT|PASS|<n> identical, <m> skipped, checked against <template>
@@ -247,6 +248,14 @@ add_repo_target() {
         [ "$(canonical_path "$_existing")" = "$_hook_canon" ] && return 0
     done
     _hp=$(hooks_path_of "$_dir")
+    # A repository that never had the hook installed is not drift. Naming it
+    # with --repo, or being the vault, asserts it should have one; merely
+    # standing in it does not.
+    if [ ! -f "$_hook" ] && [ "${2:-required}" = "optional" ] && [ -z "$_hp" ]; then
+        notes+=("HOOK_DRIFT|NOTE|$_hook|no post-commit hook in this repository; nothing to compare")
+        skipped=$((skipped + 1))
+        return 0
+    fi
     if [ -n "$_hp" ]; then
         targets+=("$_hook"); kinds+=("tracked|$_dir")
         if [ -f "$_dir/.git/hooks/post-commit" ] && [ "$_hook" != "$_dir/.git/hooks/post-commit" ]; then
@@ -273,7 +282,7 @@ if [ "$explicit_targets" -eq 0 ]; then
     if [ "$explicit_repos" -eq 1 ]; then
         for _repo in "${repos[@]}"; do add_repo_target "$_repo"; done
     elif _err=$(git -C "$root" rev-parse --is-inside-work-tree 2>&1 >/dev/null); then
-        add_repo_target "$root"
+        add_repo_target "$root" optional
     else
         case "$_err" in
             *safe.directory*)
